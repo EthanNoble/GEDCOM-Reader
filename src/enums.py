@@ -1,227 +1,203 @@
-from enum import Enum
-from typing import Optional
+'''
+This module defines enums for parsing and interpreting GEDCOM files.
+'''
 
-def key_is_in(s: str, enum_class: Enum) -> bool:
-    return s in enum_class._member_map_
+from enum import Enum, StrEnum
 
-def val_is_in(s: str, enum_class: Enum) -> bool:
-    return s in enum_class._value2member_map_
-
-def key_of(value: str, enum_class: Enum) -> Optional[str]:
-    return enum_class._value2member_map_[value] if val_is_in(value, enum_class) else None
-
-def value_of(key: str, enum_class: Enum) -> Optional[str]:
-    return enum_class._member_map_[key].value if key_is_in(key, enum_class) else None
-
-months = {
-    1: 'January',
-    2: 'February',
-    3: 'March',
-    4: 'April',
-    5: 'May',
-    6: 'June',
-    7: 'July',
-    8: 'August',
-    9: 'September',
-    10: 'October',
-    11: 'November',
-    12: 'December'
-}
 
 class ByteOrderMark(Enum):
     '''
     Represents the byte order marks that might be present in a GEDCOM file.
     These are used to indicate the endianness of the file.
     '''
-    _32_BIT_BIG_ENDIAN: int = 0
-    _32_BIT_LITTLE_ENDIAN: int = 1
-    _16_BIT_BIG_ENDIAN: int = 2
-    _16_BIT_LITTLE_ENDIAN: int = 3
-    _8_BIT: int = 4
+    NONE = 0
+    BIG_ENDIAN_32_BIT = 1
+    LITTLE_ENDIAN_32_BIT = 2
+    BIG_ENDIAN_16_BIT = 3
+    LITTLE_ENDIAN_16_BIT = 4
+    BIT_8 = 5
+
 
 class NoticeType(Enum):
     '''
     Represents the types of notices that can be generated during parsing.
     These types are used to indicate the severity of the notice.
     '''
-    ERROR: int = 0
-    WARNING: int = 1
+    ERROR = 0
+    WARNING = 1
 
-class NameType(Enum):
+
+class JSONField(Enum):
+    '''
+    Represents the fields that can be included in the JSON output.
+    These fields correspond to the attributes of the entities in the GEDCOM file.
+    '''
+    IND = 0
+    FAM = 1
+
+
+class NameType(StrEnum):
     '''
     Represents the different types of names and individual might have.
     These types are defined in the GEDCOM 5.5.5 specification.
     '''
-    MAIN: str = 'main'
-    AKA: str = 'aka'
-    BIRTH: str = 'birth'
-    IMMIGRANT: str = 'immigrant'
-    MAIDEN: str = 'maiden'
-    MARRIED: str = 'married'
+    MAIN = 'main'
+    AKA = 'aka'
+    BIRTH = 'birth'
+    IMMIGRANT = 'immigrant'
+    MAIDEN = 'maiden'
+    MARRIED = 'married'
 
-name_to_str = {
-    'main': 'Main',
-    'aka': 'Also Known As',
-    'birth': 'Birth',
-    'immigrant': 'Immigrant',
-    'maiden': 'Maiden',
-    'married': 'Married'
-}
 
-class Sex(Enum):
+class Sex(StrEnum):
     '''
     Represents the sex of an individual in a GEDCOM file.
     These values are defined in the GEDCOM 5.5.5 specification.
     '''
-    M: str = 'M'
-    F: str = 'F'
-    U: str = 'U'
-    X: str = 'X'
-    N: str = 'N'
+    MALE = 'M'
+    FEMALE = 'F'
+    UNKNOWN = 'U'
+    INTERSEX = 'X'
+    NOT_RECORDED = 'N'
 
-sex_to_str = {
-    'M': 'Male',
-    'F': 'Female',
-    'U': 'Unknown',
-    'X': 'Intersex',
-    'N': 'Not Record'
-}
 
-class Tag(Enum):
+class Tag(StrEnum):
     '''
     Represents the tags used in GEDCOM files.
     These tags are defined in the GEDCOM 5.5.5
     specification except for SSN and FSID.
     '''
-    GEDC: str = 'GEDC'
-    HEAD: str = 'HEAD'
-    TRLR: str = 'TRLR'
-    VERS: str = 'VERS'
-    DEST: str = 'DEST'
-    SOUR: str = 'SOUR'
-    CORP: str = 'CORP'
-    DATA: str = 'DATA'
-    DATE: str = 'DATE'
-    COMM: str = 'COMM'
-    COPR: str = 'COPR'
-    TIME: str = 'TIME'
-    LANG: str = 'LANG'
-    SUBM: str = 'SUBM'
-    FILE: str = 'FILE'
-    NOTE: str = 'NOTE'
-    FAM: str = 'FAM'
-    HUSB: str = 'HUSB'
-    WIFE: str = 'WIFE'
-    MARR: str = 'MARR'
-    CHIL: str = 'CHIL'
-    NCHI: str = 'NCHI'
-    REFN: str = 'REFN'
-    TYPE: str = 'TYPE'
-    FONE: str = 'FONE'
-    RIN: str = 'RIN'
-    INDI: str = 'INDI'
-    SEX: str = 'SEX'
-    OBJE: str = 'OBJE'
-    TITL: str = 'TITL'
-    REPO: str = 'REPO'
-    PLAC: str = 'PLAC'
-    AGNC: str = 'AGNC'
-    AUTH: str = 'AUTH'
-    ABBR: str = 'ABBR'
-    TEXT: str = 'TEXT'
-    ADDR: str = 'ADDR'
-    ADR1: str = 'ADR1'
-    ADR2: str = 'ADR2'
-    ADR3: str = 'ADR3'
-    CITY: str = 'CITY'
-    STAE: str = 'STAE'
-    POST: str = 'POST'
-    COUN: str = 'COUN'
-    PHON: str = 'PHON'
-    EMAIL: str = 'EMAIL'
-    FAX: str = 'FAX'
-    WWW: str = 'WWW'
-    ASSOC: str = 'ASSOC'
-    RELA: str = 'RELA'
-    CHAN: str = 'CHAN'
-    FAMC: str = 'FAMC'
-    PEDI: str = 'PEDI'
-    CAUS: str = 'CAUS'
-    AGE: str = 'AGE'
-    ANUL: str = 'ANUL'
-    CENS: str = 'CENS'
-    DIV: str = 'DIV'
-    DIVF: str = 'DIVF'
-    ENGA: str = 'ENGA'
-    MARB: str = 'MARB'
-    MARC: str = 'MARC'
-    MARL: str = 'MARL'
-    MARS: str = 'MARS'
-    RESI: str = 'RESI'
-    EVEN: str = 'EVEN'
-    CAST: str = 'CAST'
-    DESC: str = 'DESC'
-    EDUC: str = 'EDUC'
-    IDNO: str = 'IDNO'
-    NATI: str = 'NATI'
-    NAME: str = 'NAME'
-    RELN: str = 'RELN'
-    OCCU: str = 'OCCU'
-    POSS: str = 'POSS'
-    RELI: str = 'RELI'
-    FACT: str = 'FACT'
-    BIRT: str = 'BIRT'
-    CHR: str = 'CHR'
-    DEAT: str = 'DEAT'
-    BURI: str = 'BURI'
-    CREM: str = 'CREM'
-    ADOP: str = 'ADOP'
-    BAPM: str = 'BAPM'
-    BARM: str = 'BARM'
-    BASM: str = 'BASM'
-    CHRA: str = 'CHRA'
-    CONF: str = 'CONF'
-    CONT: str = 'CONT'
-    FCOM: str = 'FCOM'
-    NATU: str = 'NATU'
-    EMIG: str = 'EMIG'
-    IMMI: str = 'IMMI'
-    PROB: str = 'PROB'
-    WILL: str = 'WILL'
-    GRAD: str = 'GRAD'
-    RETI: str = 'RETI'
-    NPFX: str = 'NPFX'
-    GIVN: str = 'GIVN'
-    NICK: str = 'NICK'
-    SPFX: str = 'SPFX'
-    SURN: str = 'SURN'
-    NSFX: str = 'NSFX'
-    ROMN: str = 'ROMN'
-    MAP: str = 'MAP'
-    LATI: str = 'LATI'
-    LONG: str = 'LONG'
-    PAGE: str = 'PAGE'
-    ROLE: str = 'ROLE'
-    CERT: str = 'CERT'
-    MEDI: str = 'MEDI'
-    FAMS: str = 'FAMS'
-    CHAR: str = 'CHAR'
-    FORM: str = 'FORM'
-    CTRY: str = 'CTRY'
-    CONC: str = 'CONC'
-    PUBL: str = 'PUBL'
-    ALIA: str = 'ALIA'
-    SSN: str = 'SSN'
-    FSID: str = 'FSID'
+    GEDC = 'GEDC'
+    HEAD = 'HEAD'
+    TRLR = 'TRLR'
+    VERS = 'VERS'
+    DEST = 'DEST'
+    SOUR = 'SOUR'
+    CORP = 'CORP'
+    DATA = 'DATA'
+    DATE = 'DATE'
+    COMM = 'COMM'
+    COPR = 'COPR'
+    TIME = 'TIME'
+    LANG = 'LANG'
+    SUBM = 'SUBM'
+    FILE = 'FILE'
+    NOTE = 'NOTE'
+    FAM = 'FAM'
+    HUSB = 'HUSB'
+    WIFE = 'WIFE'
+    MARR = 'MARR'
+    CHIL = 'CHIL'
+    NCHI = 'NCHI'
+    REFN = 'REFN'
+    TYPE = 'TYPE'
+    FONE = 'FONE'
+    RIN = 'RIN'
+    INDI = 'INDI'
+    SEX = 'SEX'
+    OBJE = 'OBJE'
+    TITL = 'TITL'
+    REPO = 'REPO'
+    PLAC = 'PLAC'
+    AGNC = 'AGNC'
+    AUTH = 'AUTH'
+    ABBR = 'ABBR'
+    TEXT = 'TEXT'
+    ADDR = 'ADDR'
+    ADR1 = 'ADR1'
+    ADR2 = 'ADR2'
+    ADR3 = 'ADR3'
+    CITY = 'CITY'
+    STAE = 'STAE'
+    POST = 'POST'
+    COUN = 'COUN'
+    PHON = 'PHON'
+    EMAIL = 'EMAIL'
+    FAX = 'FAX'
+    WWW = 'WWW'
+    ASSOC = 'ASSOC'
+    RELA = 'RELA'
+    CHAN = 'CHAN'
+    FAMC = 'FAMC'
+    PEDI = 'PEDI'
+    CAUS = 'CAUS'
+    AGE = 'AGE'
+    ANUL = 'ANUL'
+    CENS = 'CENS'
+    DIV = 'DIV'
+    DIVF = 'DIVF'
+    ENGA = 'ENGA'
+    MARB = 'MARB'
+    MARC = 'MARC'
+    MARL = 'MARL'
+    MARS = 'MARS'
+    RESI = 'RESI'
+    EVEN = 'EVEN'
+    CAST = 'CAST'
+    DESC = 'DESC'
+    EDUC = 'EDUC'
+    IDNO = 'IDNO'
+    NATI = 'NATI'
+    NAME = 'NAME'
+    RELN = 'RELN'
+    OCCU = 'OCCU'
+    POSS = 'POSS'
+    RELI = 'RELI'
+    FACT = 'FACT'
+    BIRT = 'BIRT'
+    CHR = 'CHR'
+    DEAT = 'DEAT'
+    BURI = 'BURI'
+    CREM = 'CREM'
+    ADOP = 'ADOP'
+    BAPM = 'BAPM'
+    BARM = 'BARM'
+    BASM = 'BASM'
+    CHRA = 'CHRA'
+    CONF = 'CONF'
+    CONT = 'CONT'
+    FCOM = 'FCOM'
+    NATU = 'NATU'
+    EMIG = 'EMIG'
+    IMMI = 'IMMI'
+    PROB = 'PROB'
+    WILL = 'WILL'
+    GRAD = 'GRAD'
+    RETI = 'RETI'
+    NPFX = 'NPFX'
+    GIVN = 'GIVN'
+    NICK = 'NICK'
+    SPFX = 'SPFX'
+    SURN = 'SURN'
+    NSFX = 'NSFX'
+    ROMN = 'ROMN'
+    MAP = 'MAP'
+    LATI = 'LATI'
+    LONG = 'LONG'
+    PAGE = 'PAGE'
+    ROLE = 'ROLE'
+    CERT = 'CERT'
+    MEDI = 'MEDI'
+    FAMS = 'FAMS'
+    CHAR = 'CHAR'
+    FORM = 'FORM'
+    CTRY = 'CTRY'
+    CONC = 'CONC'
+    PUBL = 'PUBL'
+    ALIA = 'ALIA'
+    SSN = 'SSN'
+    FSID = 'FSID'
 
-class ObsoleteTag(Enum):
+
+class ObsoleteTag(StrEnum):
     '''
     Represents tags that are no longer in use in GEDCOM files.
     These tags may still appear in older GEDCOM files.
     They are not used in the current GEDCOM 5.5.5 specification.
     '''
-    SSN: str = 'SSN'
-    FSID: str = 'FSID'
+    SSN = 'SSN'
+    FSID = 'FSID'
+
 
 indi_event_type = {
     Tag.BIRT.value: 'Birth',
@@ -247,10 +223,34 @@ indi_event_type = {
     Tag.EVEN.value: ''
 }
 
-class JSONField(Enum):
-    '''
-    Represents the fields that can be included in the JSON output.
-    These fields correspond to the attributes of the entities in the GEDCOM file.
-    '''
-    IND: int = 0
-    FAM: int = 1
+sex_to_str = {
+    'M': 'Male',
+    'F': 'Female',
+    'U': 'Unknown',
+    'X': 'Intersex',
+    'N': 'Not Record'
+}
+
+months = {
+    1: 'January',
+    2: 'February',
+    3: 'March',
+    4: 'April',
+    5: 'May',
+    6: 'June',
+    7: 'July',
+    8: 'August',
+    9: 'September',
+    10: 'October',
+    11: 'November',
+    12: 'December'
+}
+
+name_to_str = {
+    'main': 'Main',
+    'aka': 'Also Known As',
+    'birth': 'Birth',
+    'immigrant': 'Immigrant',
+    'maiden': 'Maiden',
+    'married': 'Married'
+}

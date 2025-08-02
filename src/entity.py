@@ -1,21 +1,35 @@
+'''
+Entity classes for representing GEDCOM data structures.
+'''
+
 from typing import List
 from typing import Optional
-from dateutil.parser import parse
 from datetime import datetime
+from dateutil.parser import parse
 
-import src.enums as enums
+from src import enums
+
 
 class Address:
+    '''
+    Represents an address.
+    '''
     def __init__(self):
         self._addresses: List[str] = []
         self.city: str = ''
         self.state: str = ''
         self.postal: str = ''
         self.country: str = ''
-    
-    def jsonify(self):
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the address.
+        If no address is set, returns an empty string.
+        Returns:
+            JSON serializable object
+        '''
         return {
-            'addresses': [addr for addr in self._addresses],
+            'addresses': list(addr for addr in self._addresses),
             'city': self.city,
             'state': self.state,
             'postal': self.postal,
@@ -23,6 +37,11 @@ class Address:
         }
 
     def add_address(self, addr: str) -> None:
+        '''
+        Adds an address to the list of addresses.
+        Args:
+            addr (str): The address to add.
+        '''
         self._addresses.append(addr)
 
     def __str__(self):
@@ -37,50 +56,83 @@ class Address:
             parts.append(self.country)
         return ' '.join(parts)
 
+
 class Place:
+    '''
+    Represents a place.
+    '''
     def __init__(self):
         self.name: Optional[str] = None
         self.latitude: Optional[str] = None
         self.longitude: Optional[str] = None
-    
-    def jsonify(self):
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the place.
+        If no name, latitude, or longitude is set, returns an empty string.
+        Returns:
+            JSON serializable object or empty string
+        '''
         if not self.name and not self.latitude and not self.longitude:
-            return None
-        
+            return ''
+
         return {
             'name': self.name,
             'latitude': self.latitude,
             'longitude': self.longitude
         }
 
+
 class Event:
-    def __init__(self, type: Optional[str] = None):
-        self.type: Optional[str] = type
-        self.date: Optional[Date] = None
-        self.address: Optional[Address] = None
-        self.place: Optional[Place] = None
-        self.note: Optional[str] = None
-    
-    def jsonify(self):
+    '''
+    Represents an event in a person's life.
+    '''
+    def __init__(self, event_type: str | None = None):
+        self.event_type: str | None = event_type
+        self.date: Date | None = None
+        self.address: Address | None = None
+        self.place: Place | None = None
+        self.note: str | None = None
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the event.
+        If no date or address is set, returns an empty string.
+        Returns:
+            JSON serializable object or empty string
+        '''
         if not self.date and not self.address:
-            return None
-        
+            return ''
+
         return {
-            'type': self.type,
+            'type': self.event_type,
             'date': self.date.jsonify() if self.date else None,
             'place': self.place.jsonify() if self.place else None,
             'address': self.address.jsonify() if self.address else None,
             'note': self.note
         }
 
-class Date(object):
-    def __init__(self, date: Optional[str] = None):
-        self._raw_date_str: str = date
+
+class Date:
+    '''
+    Represents a date which can be parsed from a string.
+    '''
+    def __init__(self, date: str | None = None):
+        self._raw_date_str: str | None = date
         self._date: Optional[datetime] = None
         if date:
             self._parse_date()
-    
-    def jsonify(self):
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the date.
+        If no date is set, returns None.
+        Returns:
+            JSON serializable object with original date string, date, day, month, and year
+        '''
+        if not self._raw_date_str or not self._date:
+            return None
+
         return {
             'original': self._raw_date_str,
             'date': str(self) if self._date else None,
@@ -90,16 +142,36 @@ class Date(object):
         }
 
     def set_date(self, date: str):
+        '''
+        Sets the date from a string and parses it.
+        Args:
+            date (str): The date string to set.
+        '''
         self._raw_date_str = date
         self._parse_date()
-    
-    def day(self) -> Optional[int]:
+
+    def day(self) -> int | None:
+        '''
+        Returns the day of the month if the date is set, otherwise None.
+        Returns:
+            int | None: The day of the month or None if not set.
+        '''
         return self._date.day if self._date else None
-    
-    def month(self) -> Optional[int]:
+
+    def month(self) -> int | None:
+        '''
+        Returns the month of the year if the date is set, otherwise None.
+        Returns:
+            int | None: The month of the year or None if not set.
+        '''
         return self._date.month if self._date else None
-    
-    def year(self) -> Optional[int]:
+
+    def year(self) -> int | None:
+        '''
+        Returns the year if the date is set, otherwise None.
+        Returns:
+            int | None: The year or None if not set.
+        '''
         return self._date.year if self._date else None
 
     def _parse_date(self) -> None:
@@ -113,15 +185,25 @@ class Date(object):
     def __str__(self):
         return self._date.strftime('%Y-%m-%d') if self._date else ''
 
-class Header(object):
+
+class Header:
+    '''
+    Represents the header of a GEDCOM file.
+    '''
     def __init__(self):
         self.source: Optional[str] = None
         self.date: Optional[Date] = None
         self.gedcom_version: Optional[str] = None
         self.submission: Optional[str] = None
         self.submitter: Optional[str] = None
-    
-    def jsonify(self):
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the header.
+        Returns:
+            JSON serializable object with source, date, gedcom_version, submission, and submitter
+        '''
+
         return {
             'source': self.source,
             'date': self.date.jsonify() if self.date else None,
@@ -130,11 +212,18 @@ class Header(object):
             'submitter': self.submitter
         }
 
-class Individual(object):
-    class Name(object):
-        def __init__(self, name_type: int = enums.NameType.MAIN):
+
+class Individual:
+    '''
+    Represents an individual in a GEDCOM file.
+    '''
+    class Name:
+        '''
+        Represents a name of an individual, which can have multiple parts.
+        '''
+        def __init__(self, name_type: enums.NameType = enums.NameType.MAIN):
             # Enum data.NameType
-            self.type: int = name_type
+            self.type: enums.NameType = name_type
             # From the line value of a NAME record
             self.unstructured_name_parts: List[str] = []
             # From a SURN sub record of a NAME record
@@ -149,80 +238,122 @@ class Individual(object):
             self.surname_prefix: Optional[str] = None
             # From a NSFX sub record of NAME
             self.suffix: Optional[str] = None
-        
-        def jsonify(self):
-            parts_list: List[str] = []
+
+        def jsonify(self) -> object:
+            '''
+            Returns a JSON serializable representation of the name.
+            Returns:
+                JSON serializable object with type, name, and parts
+            '''
+            parts_list: List[object] = []
+
             if self.surname:
-                parts_list.append({'type': 'Surname', 'value': self.surname})
+                parts_list.append(
+                    {'type': 'Surname', 'value': self.surname})
+
             if self.prefix:
-                parts_list.append({'type': 'Prefix', 'value': self.prefix})
+                parts_list.append(
+                    {'type': 'Prefix', 'value': self.prefix})
+
             if self.given:
-                parts_list.append({'type': 'Given', 'value': self.given})
+                parts_list.append(
+                    {'type': 'Given', 'value': self.given})
+
             if self.nickname:
-                parts_list.append({'type': 'Nickname', 'value': self.nickname})
+                parts_list.append(
+                    {'type': 'Nickname', 'value': self.nickname})
+
             if self.surname_prefix:
-                parts_list.append({'type': 'SurnamePrefix', 'value': self.surname_prefix})
+                parts_list.append(
+                    {'type': 'SurnamePrefix', 'value': self.surname_prefix})
+
             if self.suffix:
-                parts_list.append({'type': 'Suffix', 'value': self.suffix})
-                
-            name_object: dict[str, Optional[str]] = {
+                parts_list.append(
+                    {'type': 'Suffix', 'value': self.suffix})
+
+            return {
                 'type': enums.name_to_str[self.type.value],
                 'name': ' '.join(self.unstructured_name_parts) if len(self.unstructured_name_parts) > 0 else None,
                 'parts': parts_list if len(parts_list) > 0 else None
             }
 
-            return name_object
-
-    def __init__(self, id: Optional[str] = None):
-        self.id: Optional[str] = id
+    def __init__(self, indi_id: Optional[str] = None):
+        self.indi_id: Optional[str] = indi_id
         self.names: List[Individual.Name] = []
-        self.sex: str = enums.Sex.U # Enum data.Sex
+        self.sex: enums.Sex = enums.Sex.UNKNOWN
         self._events: List[Event] = []
         self.dead: bool = False
 
         self.parent1: Optional[Individual] = None
         self.parent2: Optional[Individual] = None
-    
-    def jsonify(self):
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the individual.
+        Returns:
+            JSON serializable object
+        '''
         return {
-            'id': self.id,
-            'names': [name.jsonify() for name in self.names] if len(self.names) > 0 else None,
+            'id': self.indi_id,
+            'names': [name.jsonify() for name in self.names],
             'sex': enums.sex_to_str[self.sex.value],
             'is_dead': self.dead,
-            'events': [event.jsonify() for event in self._events] if len(self._events) > 0 else None,
+            'events': [event.jsonify() for event in self._events],
         }
-    
+
     def add_event(self, event: Event) -> None:
+        '''
+        Adds an event to the individual's list of events.
+        Args:
+            event (Event): The event to add.
+        '''
         self._events.append(event)
-    
-class Family(object):
-    def __init__(self, id: Optional[str] = None):
-        self.id: Optional[str] = id
+
+
+class Family:
+    '''
+    Represents a family in a GEDCOM file, which can have two parents and multiple children.
+    '''
+    def __init__(self, fam_id: Optional[str] = None):
+        self.fam_id: Optional[str] = fam_id
         self.parent1: Optional[Individual] = None
         self.parent2: Optional[Individual] = None
         self._children: List[Individual] = []
-    
-    def jsonify(self):
+
+    def jsonify(self) -> object:
+        '''
+        Returns a JSON serializable representation of the family.
+        Returns:
+            JSON serializable object with id, parent1, parent2, and children
+        '''
         return {
-            'id': self.id,
-            'parent1': self.parent1.id if self.parent1 else None,
-            'parent2': self.parent2.id if self.parent2 else None,
-            'children': [child.id for child in self._children] if len(self._children) > 0 else None
+            'id': self.fam_id,
+            'parent1': self.parent1.indi_id if self.parent1 else None,
+            'parent2': self.parent2.indi_id if self.parent2 else None,
+            'children': [child.indi_id for child in self._children] if len(self._children) > 0 else None
         }
 
     def add_child(self, child: Individual) -> None:
+        '''
+        Adds a child to the family.
+        Args:
+            child (Individual): The child to add.'''
         self._children.append(child)
 
-class Record(object):
+
+class Record:
+    '''
+    Represents a record in a GEDCOM file.
+    '''
     def __init__(self, level: int):
         self.level: int = level
-        self.tag: str = '' # Enum data.Tag
+        self.tag: str = ''  # Enum data.Tag
         self.line_value: str = ''
 
         self.cross_ref_id: str = ''
         self.cross_ref_ptr: str = ''
 
-        self._ignorable = False
+        self.ignorable = False
 
         self.child_records: List[Record] = []
         # The individual built from this record if this record tag is INDI

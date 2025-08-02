@@ -35,21 +35,7 @@ Make sure to activate the virtual environemnt and then install the dependencies 
 
 `pip install -r requirements.txt`
 
-Create a python file in the root project directory named anything, you can use `main.py`
-
-`touch main.py`
-
-In your new python file, add this code to run the parser on a GEDCOM file
-
-```
-from src.file import File
-import src.enums as enums
-
-gedcom_file = File('ABSOLUTE_PATH_TO_GEDCOM_FILE')
-gedcom_file.jsonify(True, enums.JSONField.IND, enums.JSONField.FAM)
-```
-
-Run the script to execute the parser on your GEDCOM file
+Run the script `main.py` to execute the parser on your GEDCOM file
 
 # Contributions
 

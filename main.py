@@ -1,5 +1,11 @@
-from src.file import File
-import src.enums as enums
+'''
+This file is part of the GEDCOM-Reader project.
+'''
 
-gedcom_file = File('ABSOLUTE_PATH_TO_GEDCOM_FILE')
-gedcom_file.jsonify(True, enums.JSONField.IND, enums.JSONField.FAM)
+from src.file import File
+from src import enums
+
+gedcom_file = File('')
+json_str = gedcom_file.jsonify(enums.JSONField.IND, enums.JSONField.FAM)
+with open('', 'w', encoding='utf-8') as fp:
+    fp.write(json_str)
