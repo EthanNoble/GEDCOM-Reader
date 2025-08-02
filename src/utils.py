@@ -1,6 +1,6 @@
-"""
+'''
 Utility functions for validating and parsing GEDCOM tokens.
-"""
+'''
 
 from src import enums
 
@@ -72,7 +72,7 @@ def is_obsolete_tag(token: str) -> bool:
     Returns:
         bool: True if the token is an obsolete tag, False otherwise.
     '''
-    return token in enums.ObsoleteTag._member_map_
+    return token in enums.ObsoleteTag
 
 
 def is_valid_tag(token: str) -> bool:
@@ -85,7 +85,7 @@ def is_valid_tag(token: str) -> bool:
     Returns:
         bool: True if the token is a valid tag, False otherwise.
     '''
-    return token in enums.Tag._member_map_
+    return token in enums.Tag
 
 
 def is_user_defined_tag(token: str, allow_redefined: bool) -> bool:
@@ -115,7 +115,7 @@ def is_user_defined_tag(token: str, allow_redefined: bool) -> bool:
         return False
 
     # Redefined tags are not allowed
-    if not allow_redefined and token.lstrip('_') in enums.Tag._member_map_:
+    if not allow_redefined and token.lstrip('_') in enums.Tag:
         return False
 
     return True
