@@ -2,12 +2,109 @@
 Entity classes for representing GEDCOM data structures.
 '''
 
-from typing import List
-from typing import Optional
+import json
+from typing import List, Dict, Any, Optional
+from typing import cast
 from datetime import datetime
 from dateutil.parser import parse
 
 from src import enums
+
+
+class EntityContainer:
+    def __init__(self, data: Dict[str, Any]) -> None:
+        self._data = data
+    
+    def jsonify(self) -> str:
+        '''
+        Convert the container's data to json, and prune keys that have empty values.
+        An empty value is any value that contains `None`, `''`, `[]`, or `{}`.
+        '''
+        def is_empty(value: Any) -> bool:
+            if value is None:
+                return True
+            if isinstance(value, str) and value.strip() == '':
+                return True
+            if isinstance(value, (list, dict)) and not value:
+                return True
+            return False
+
+        def serialize(value: Any) -> Any:
+            if isinstance(value, EntityContainer):
+                return {
+                    k: v_ser for k, v in value.get_data().items()
+                    if not is_empty(v_ser := serialize(v))
+                } or None
+            elif isinstance(value, dict):
+                value_dict = cast(Dict[str, Any], value)
+                return {
+                    k: v_ser for k, v in value_dict.items()
+                    if not is_empty(v_ser := serialize(v))
+                } or None
+            elif isinstance(value, list):
+                value_list = cast(list[Any], value)
+                return [
+                    v_ser for v in value_list
+                    if not is_empty(v_ser := serialize(v))
+                ] or None
+
+            return None if is_empty(value) else value
+
+        cleaned_data = {}
+        for key, value in self._data.items():
+            serialized_value = serialize(value)
+            if serialized_value is not None:
+                cleaned_data[key] = serialized_value
+
+        return json.dumps(cleaned_data, indent=4)
+
+    def get_data(self) -> Dict[str, Any]:
+        return self._data
+    
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+    
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._data[key] = value
+
+
+class Header(EntityContainer):
+    '''
+    The header of a GEDCOM file.
+    '''
+    def __init__(self):
+        super().__init__({
+            'SOUR': {
+                'VERS': '',
+                'NAME': '',
+                'CORP': {
+                    'NAME': '',
+                    'ADDR': ''
+                },
+                'DATA': {
+                    'NAME': '',
+                    'DATE': '',
+                    'COPR': ''
+                }
+            },
+            'DEST': '',
+            'DATE': '',
+            'SUBM': '',
+            'SUBN': '',
+            'FILE': '',
+            'COPR': '',
+            'GEDC': {
+                'VERS': '',
+                'FORM': '',
+            },
+            'CHAR': {
+                'VERS': '',
+                'NAME': ''
+            },
+            'LANG': '',
+            'PLAC': '',
+            'NOTE': ''
+        })
 
 
 class Address:
