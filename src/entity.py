@@ -3,9 +3,9 @@ Entity classes for representing GEDCOM data structures.
 '''
 
 import json
-from typing import List, Dict, Any, Optional
+from typing import Any, List, Dict
 from typing import cast
-from datetime import datetime
+from datetime import date
 from dateutil.parser import parse
 
 from src import enums
@@ -17,8 +17,10 @@ class EntityContainer:
     
     def jsonify(self) -> str:
         '''
-        Convert the container's data to json, and prune keys that have empty values.
+        Serializes the container's data to json and prunes keys that have empty values.
         An empty value is any value that contains `None`, `''`, `[]`, or `{}`.
+        Returns:
+            str: The JSON serialized string
         '''
         def is_empty(value: Any) -> bool:
             if value is None:
@@ -59,6 +61,12 @@ class EntityContainer:
         return json.dumps(cleaned_data, indent=4)
 
     def get_data(self) -> Dict[str, Any]:
+        '''
+        Gets the data of this container. It is recomended to use the
+        `jsonify` method of this container to retrieve the data instead.
+        Returns:
+            Dict[str, Any]: The container's data
+        '''
         return self._data
     
     def __getitem__(self, key: str) -> Any:
@@ -74,94 +82,172 @@ class Header(EntityContainer):
     '''
     def __init__(self):
         super().__init__({
-            'SOUR': {
-                'VERS': '',
-                'NAME': '',
-                'CORP': {
-                    'NAME': '',
-                    'ADDR': ''
+            'source': {
+                'version': '',
+                'systemId': '',
+                'productName': '',
+                'corporation': {
+                    'businessName': '',
+                    'businessAddress': ''
                 },
-                'DATA': {
-                    'NAME': '',
-                    'DATE': '',
-                    'COPR': ''
+                'sourceData': {
+                    'sourceName': '',
+                    'publicationDate': '',
+                    'sourceDataCopyright': ''
                 }
             },
-            'DEST': '',
-            'DATE': '',
-            'SUBM': '',
-            'SUBN': '',
-            'FILE': '',
-            'COPR': '',
-            'GEDC': {
-                'VERS': '',
-                'FORM': '',
+            'receivingSystem': '',
+            'transmissionDate': '',
+            'submittingTo': '',
+            'submittedBy': '',
+            'fileName': '',
+            'gedcomFileCopyright': '',
+            'gedcomFileMeta': {
+                'version': '',
+                'form': '',
             },
-            'CHAR': {
-                'VERS': '',
-                'NAME': ''
+            'characterSet': {
+                'version': '',
+                'charSetType': ''
             },
-            'LANG': '',
-            'PLAC': '',
-            'NOTE': ''
+            'language': '',
+            'place': '',
+            'note': ''
+        })
+    
+    def set_source_version(self, value: str) -> None:
+        self._data['source']['version'] = value
+
+    def set_source_system_id(self, value: str) -> None:
+        self._data['source']['systemId'] = value
+
+    def set_source_product_name(self, value: str) -> None:
+        self._data['source']['productName'] = value
+
+    def set_source_corporation_business_name(self, value: str) -> None:
+        self._data['source']['corporation']['businessName'] = value
+
+    def set_source_corporation_business_address(self, address: EntityContainer) -> None:
+        self._data['source']['corporation']['businessAddress'] = address
+
+    def set_source_data_source_name(self, value: str) -> None:
+        self._data['source']['sourceData']['sourceName'] = value
+
+    def set_source_data_publication_date(self, date: EntityContainer) -> None:
+        self._data['source']['sourceData']['publicationDate'] = date
+
+    def set_source_data_copyright(self, value: str) -> None:
+        self._data['source']['sourceData']['sourceDataCopyright'] = value
+
+    def set_receiving_system(self, value: str) -> None:
+        self._data['receivingSystem'] = value
+
+    def set_transmission_date(self, date: EntityContainer) -> None:
+        self._data['transmissionDate'] = date
+
+    def set_submitting_to(self, value: str) -> None:
+        self._data['submittingTo'] = value
+
+    def set_submitted_by(self, value: str) -> None:
+        self._data['submittedBy'] = value
+
+    def set_file_name(self, value: str) -> None:
+        self._data['fileName'] = value
+
+    def set_gedcom_file_copyright(self, value: str) -> None:
+        self._data['gedcomFileCopyright'] = value
+    
+    def set_gedcom_file_meta_version(self, value: str) -> None:
+        self._data['gedcomFileMeta']['version'] = value
+
+    def set_gedcom_file_meta_form(self, value: str) -> None:
+        self._data['gedcomFileMeta']['form'] = value
+    
+    def set_character_set_version(self, value: str) -> None:
+        self._data['characterSet']['version'] = value
+
+    def set_character_set_type(self, value: str) -> None:
+        self._data['characterSet']['charSetType'] = value
+
+    def set_language(self, value: str) -> None:
+        self._data['language'] = value
+
+    def set_place(self, value: str) -> None:
+        self._data['place'] = value
+
+    def set_note(self, value: str) -> None:
+        self._data['note'] = value
+
+
+class Date(EntityContainer):
+    '''
+    A date which can be parsed from a string.
+    '''
+    def __init__(self, date_str: str):
+        self._date: date = parse(date_str, fuzzy=True)
+
+        super().__init__({
+            # TODO: There will be more stuff to parse from a date
+            'parsedDate': str(self),
         })
 
+    def __str__(self):
+        return self._date.strftime('%Y-%m-%d')
 
-class Address:
+
+class Address(EntityContainer):
     '''
-    Represents an address.
+    An address.
     '''
     def __init__(self):
-        self._addresses: List[str] = []
-        self.city: str = ''
-        self.state: str = ''
-        self.postal: str = ''
-        self.country: str = ''
+        super().__init__({
+            'addressLines': [],
+            'cityAddress': '',
+            'stateAddress': '',
+            'zipCode': '',
+            'countryAddress': '',
+            'phoneNumber': '',
+            'emailAddress': '',
+            'faxAddress': '',
+            'webAddress': '',
+        })
 
-    def jsonify(self) -> object:
-        '''
-        Returns a JSON serializable representation of the address.
-        If no address is set, returns an empty string.
-        Returns:
-            JSON serializable object
-        '''
-        return {
-            'addresses': list(addr for addr in self._addresses),
-            'city': self.city,
-            'state': self.state,
-            'postal': self.postal,
-            'country': self.country
-        }
+    def add_address_line(self, addr: str) -> None:
+        self._data['addressLines'].append(addr)
 
-    def add_address(self, addr: str) -> None:
-        '''
-        Adds an address to the list of addresses.
-        Args:
-            addr (str): The address to add.
-        '''
-        self._addresses.append(addr)
+    def set_city_address(self, city: str) -> None:
+        self._data['cityAddress'] = city
 
-    def __str__(self):
-        parts: list[str] = []
-        if self.city:
-            parts.append(self.city)
-        if self.state:
-            parts.append(self.state)
-        if self.postal:
-            parts.append(self.postal)
-        if self.country:
-            parts.append(self.country)
-        return ' '.join(parts)
+    def set_state_address(self, state: str) -> None:
+        self._data['stateAddress'] = state
+
+    def set_zip_code(self, zip_code: str) -> None:
+        self._data['zipCode'] = zip_code
+
+    def set_country_address(self, country: str) -> None:
+        self._data['countryAddress'] = country
+
+    def set_phone_number(self, phone: str) -> None:
+        self._data['phoneNumber'] = phone
+
+    def set_email_address(self, email: str) -> None:
+        self._data['emailAddress'] = email
+
+    def set_fax_address(self, fax: str) -> None:
+        self._data['faxAddress'] = fax
+
+    def set_web_address(self, web: str) -> None:
+        self._data['webAddress'] = web
 
 
 class Place:
     '''
-    Represents a place.
+    A place.
     '''
     def __init__(self):
-        self.name: Optional[str] = None
-        self.latitude: Optional[str] = None
-        self.longitude: Optional[str] = None
+        self.name: str | None = None
+        self.latitude: str | None = None
+        self.longitude: str | None = None
 
     def jsonify(self) -> object:
         '''
@@ -210,106 +296,6 @@ class Event:
         }
 
 
-class Date:
-    '''
-    Represents a date which can be parsed from a string.
-    '''
-    def __init__(self, date: str | None = None):
-        self._raw_date_str: str | None = date
-        self._date: Optional[datetime] = None
-        if date:
-            self._parse_date()
-
-    def jsonify(self) -> object:
-        '''
-        Returns a JSON serializable representation of the date.
-        If no date is set, returns None.
-        Returns:
-            JSON serializable object with original date string, date, day, month, and year
-        '''
-        if not self._raw_date_str or not self._date:
-            return None
-
-        return {
-            'original': self._raw_date_str,
-            'date': str(self) if self._date else None,
-            'day': self.day(),
-            'month': self.month(),
-            'year': self.year()
-        }
-
-    def set_date(self, date: str):
-        '''
-        Sets the date from a string and parses it.
-        Args:
-            date (str): The date string to set.
-        '''
-        self._raw_date_str = date
-        self._parse_date()
-
-    def day(self) -> int | None:
-        '''
-        Returns the day of the month if the date is set, otherwise None.
-        Returns:
-            int | None: The day of the month or None if not set.
-        '''
-        return self._date.day if self._date else None
-
-    def month(self) -> int | None:
-        '''
-        Returns the month of the year if the date is set, otherwise None.
-        Returns:
-            int | None: The month of the year or None if not set.
-        '''
-        return self._date.month if self._date else None
-
-    def year(self) -> int | None:
-        '''
-        Returns the year if the date is set, otherwise None.
-        Returns:
-            int | None: The year or None if not set.
-        '''
-        return self._date.year if self._date else None
-
-    def _parse_date(self) -> None:
-        if not self._raw_date_str:
-            return
-        try:
-            self._date = parse(self._raw_date_str, fuzzy=True)
-        except ValueError:
-            pass
-
-    def __str__(self):
-        return self._date.strftime('%Y-%m-%d') if self._date else ''
-
-
-class Header:
-    '''
-    Represents the header of a GEDCOM file.
-    '''
-    def __init__(self):
-        self.source: Optional[str] = None
-        self.date: Optional[Date] = None
-        self.gedcom_version: Optional[str] = None
-        self.submission: Optional[str] = None
-        self.submitter: Optional[str] = None
-
-    def jsonify(self) -> object:
-        '''
-        Returns a JSON serializable representation of the header.
-        Returns:
-            JSON serializable object with source, date, gedcom_version, submission, and submitter
-        '''
-
-        return {
-            'source': self.source,
-            'date': self.date.jsonify() if self.date else None,
-            'gedcom_version': self.gedcom_version,
-            'submission': self.submission,
-            'submitter': self.submitter
-        }
-
-
 class Individual:
     '''
     Represents an individual in a GEDCOM file.
@@ -324,17 +310,17 @@ class Individual:
             # From the line value of a NAME record
             self.unstructured_name_parts: List[str] = []
             # From a SURN sub record of a NAME record
-            self.surname: Optional[str] = None
+            self.surname: str | None = None
             # From a NPFX sub record of NAME
-            self.prefix: Optional[str] = None
+            self.prefix: str | None = None
             # From a GIVN sub record of NAME
-            self.given: Optional[str] = None
+            self.given: str | None = None
             # From a NICK sub record of NAME
-            self.nickname: Optional[str] = None
+            self.nickname: str | None = None
             # From a SPFX sub record of NAME
-            self.surname_prefix: Optional[str] = None
+            self.surname_prefix: str | None = None
             # From a NSFX sub record of NAME
-            self.suffix: Optional[str] = None
+            self.suffix: str | None = None
 
         def jsonify(self) -> object:
             '''
@@ -374,15 +360,15 @@ class Individual:
                 'parts': parts_list if len(parts_list) > 0 else None
             }
 
-    def __init__(self, indi_id: Optional[str] = None):
-        self.indi_id: Optional[str] = indi_id
+    def __init__(self, indi_id: str | None = None):
+        self.indi_id: str | None = indi_id
         self.names: List[Individual.Name] = []
         self.sex: enums.Sex = enums.Sex.UNKNOWN
         self._events: List[Event] = []
         self.dead: bool = False
 
-        self.parent1: Optional[Individual] = None
-        self.parent2: Optional[Individual] = None
+        self.parent1: Individual | None = None
+        self.parent2: Individual | None = None
 
     def jsonify(self) -> object:
         '''
@@ -411,10 +397,10 @@ class Family:
     '''
     Represents a family in a GEDCOM file, which can have two parents and multiple children.
     '''
-    def __init__(self, fam_id: Optional[str] = None):
-        self.fam_id: Optional[str] = fam_id
-        self.parent1: Optional[Individual] = None
-        self.parent2: Optional[Individual] = None
+    def __init__(self, fam_id: str | None = None):
+        self.fam_id: str | None = fam_id
+        self.parent1: Individual | None = None
+        self.parent2: Individual | None = None
         self._children: List[Individual] = []
 
     def jsonify(self) -> object:
@@ -427,7 +413,7 @@ class Family:
             'id': self.fam_id,
             'parent1': self.parent1.indi_id if self.parent1 else None,
             'parent2': self.parent2.indi_id if self.parent2 else None,
-            'children': [child.indi_id for child in self._children] if len(self._children) > 0 else None
+            'children': [child.indi_id for child in self._children]
         }
 
     def add_child(self, child: Individual) -> None:
@@ -454,7 +440,7 @@ class Record:
 
         self.child_records: List[Record] = []
         # The individual built from this record if this record tag is INDI
-        self.individual: Optional[Individual] = None
+        self.individual: Individual | None = None
 
     def __str__(self):
         record_str = str(self.level) + ' '

@@ -25,7 +25,7 @@ class ParseEngine:
     '''
 
     def __init__(self):
-        self._error: Optional[str] = None
+        self._error: str | None = None
         self._warnings: List[str] = []
 
         self._top_level_references: dict[str, entity.Record] = {}
@@ -196,7 +196,157 @@ class ParseEngine:
         Returns:
             entity.Header | None: A Header entity if parsing is successful, otherwise None if an error occurs.
         '''
-        return None
+        if self._header is None:
+            self._error = 'No header record found at the beginning of the GEDCOM file'
+            return None
+        
+        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized header tag \'{tag}\''
+        err_date: Callable[[str], str] = lambda value: f'Invalid header value \'{value}\' for date record'
+
+        header: entity.Header = entity.Header()
+        for record in self._header.child_records:
+            match record.tag:
+                case enums.Tag.SOUR:
+                    header.set_source_system_id(record.line_value)
+                    for source_child in record.child_records:
+                        match source_child.tag:
+                            case enums.Tag.VERS:
+                                header.set_source_version(source_child.line_value)
+                            case enums.Tag.NAME:
+                                header.set_source_product_name(source_child.line_value)
+                            case enums.Tag.CORP:
+                                header.set_source_corporation_business_name(source_child.line_value)
+                                address: entity.Address | None = self.parse_address(source_child)
+                                if address:
+                                    header.set_source_corporation_business_address(address)
+                                else:
+                                    return None
+                            case enums.Tag.DATA:
+                                header.set_source_data_source_name(source_child.line_value)
+                                for source_data_child in source_child.child_records:
+                                    match source_data_child.tag:
+                                        case enums.Tag.DATE:
+                                            try:
+                                                date: entity.Date = entity.Date(source_data_child.line_value)
+                                                header.set_source_data_publication_date(date)
+                                            except ValueError:
+                                                self._error = err_date(source_data_child.line_value)
+                                        case enums.Tag.COPR:
+                                            header.set_source_data_copyright(source_data_child.line_value)
+                                        case _:
+                                            self._error = err_unrecognized(source_data_child.tag)
+                                            return None
+                            case _:
+                                if not utils.is_user_defined_tag(source_child.tag, allow_redefined=True):
+                                    self._error = err_unrecognized(source_child.tag)
+                                    return None
+                case enums.Tag.DATE:
+                    try:
+                        date: entity.Date = entity.Date(record.line_value)
+                        header.set_transmission_date(date)
+                    except ValueError:
+                        self._error = err_date(record.line_value)
+                case enums.Tag.SUBM | enums.Tag.SUBN:
+                    # TODO: Link cross refs with their respective records
+                    if utils.is_cross_ref_id(record.cross_ref_ptr) \
+                    and utils.is_valid_cross_ref_id(record.cross_ref_ptr):
+                        if record.tag == enums.Tag.SUBM:
+                            header.set_submitting_to(record.cross_ref_ptr)
+                        elif record.tag == enums.Tag.SUBN:
+                            header.set_submitted_by(record.cross_ref_ptr)
+                case enums.Tag.GEDC:
+                    for child in record.child_records:
+                        match child.tag:
+                            case enums.Tag.VERS:
+                                header.set_gedcom_file_meta_version(child.line_value)
+                            case enums.Tag.FORM:
+                                if child.line_value in enums.Form:
+                                    header.set_gedcom_file_meta_form(child.line_value)
+                            case _:
+                                self._error = err_unrecognized(child.tag)
+                                return None
+                case enums.Tag.CHAR:
+                    header.set_character_set_type(record.line_value)
+                    for child in record.child_records:
+                        match child.tag:
+                            case enums.Tag.VERS:
+                                header.set_character_set_version(child.line_value)
+                            case _:
+                                self._error = err_unrecognized(child.tag)
+                                return None
+                case enums.Tag.PLAC:
+                    header.set_place(record.line_value)
+                case enums.Tag.DEST:
+                    header.set_receiving_system(record.line_value)
+                case enums.Tag.FILE:
+                    header.set_file_name(record.line_value)
+                case enums.Tag.COPR:
+                    header.set_gedcom_file_copyright(record.line_value)
+                case enums.Tag.LANG:
+                    header.set_language(record.line_value)
+                case enums.Tag.NOTE:
+                    header.set_note(record.line_value)
+                case _:
+                    self._error = err_unrecognized(record.tag)
+                    return None
+        
+        return header
+    
+    def parse_address(self, record: entity.Record) -> entity.Address | None:
+        '''
+        Parses an address structure from a GEDCOM record and returns an Address object.
+        Args:
+            record (entity.Record): The GEDCOM record containing address-related child records.
+        Returns:
+            entity.Address | None: An Address object populated with parsed address data, or None if no address data is found.
+        '''
+
+        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized address tag \'{tag}\''
+
+        address: entity.Address = entity.Address()
+        for record in record.child_records:
+            match record.tag:
+                case enums.Tag.ADDR:
+                    address.add_address_line(record.line_value)
+                    # Set to false once first non-CONT tag is reached. Then
+                    # if a subsequent non-connecting CONT tags are encountered,
+                    # throw an error
+                    appending_addr_cont = True
+                    for addr_child in record.child_records:
+                        match addr_child.tag:
+                            case enums.Tag.CONT:
+                                if not appending_addr_cont:
+                                    self._error = f'Out of order CONT tags within address'
+                                    return None
+                                address.add_address_line(addr_child.line_value)
+                            case enums.Tag.CITY:
+                                address.set_city_address(addr_child.line_value)
+                                appending_addr_cont = False
+                            case enums.Tag.STAE:
+                                address.set_state_address(addr_child.line_value)
+                                appending_addr_cont = False
+                            case enums.Tag.POST:
+                                address.set_zip_code(addr_child.line_value)
+                                appending_addr_cont = False
+                            case enums.Tag.CTRY:
+                                address.set_country_address(addr_child.line_value)
+                                appending_addr_cont = False
+                            case _:
+                                self._error = err_unrecognized(addr_child.tag)
+                                return None
+                case enums.Tag.PHON:
+                    address.set_phone_number(record.line_value)
+                case enums.Tag.EMAIL:
+                    address.set_email_address(record.line_value)
+                case enums.Tag.FAX:
+                    address.set_fax_address(record.line_value)
+                case enums.Tag.WWW:
+                    address.set_web_address(record.line_value)
+                case _:
+                    self._error = err_unrecognized(record.tag)
+                    return None
+                
+        return address
 
     def parse_fam_records(self) -> List[entity.Family] | None:
         '''
@@ -345,7 +495,7 @@ class ParseEngine:
         for child in record.child_records:
             match child.tag:
                 case enums.Tag.TYPE.value:
-                    event.type = child.line_value
+                    event.event_type = child.line_value
                 case enums.Tag.DATE.value:
                     event.date = entity.Date(child.line_value)
                 case enums.Tag.PLAC.value:
@@ -378,33 +528,3 @@ class ParseEngine:
                 case _:
                     pass
         return place
-
-    def parse_address_structure(self, record: entity.Record) -> Optional[entity.Address]:
-        '''
-        Parses an address structure from a GEDCOM record and returns an Address object.
-        Args:
-            record (entity.Record): The GEDCOM record containing address-related child records.
-        Returns:
-            Optional[entity.Address]: An Address object populated with parsed address data, or None if no address data is found.
-        '''
-
-        address: entity.Address = entity.Address()
-        for child in record.child_records:
-            match child.tag:
-                case enums.Tag.ADR1.value:
-                    address.add_address(child.line_value)
-                case enums.Tag.ADR2.value:
-                    address.add_address(child.line_value)
-                case enums.Tag.ADR3.value:
-                    address.add_address(child.line_value)
-                case enums.Tag.CITY.value:
-                    address.city = child.line_value
-                case enums.Tag.STAE.value:
-                    address.state = child.line_value
-                case enums.Tag.POST.value:
-                    address.postal = child.line_value
-                case enums.Tag.CTRY.value:
-                    address.country = child.line_value
-                case _:
-                    pass
-        return address

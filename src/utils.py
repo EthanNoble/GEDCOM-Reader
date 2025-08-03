@@ -148,3 +148,16 @@ def is_surname(token: str) -> bool:
         and is longer than one character; False otherwise.
     '''
     return len(token) > 1 and token[0] == '/' and token[len(token)-1] == '/'
+
+def is_valid_system_id(token: str) -> bool:
+    '''
+    Checks if the given token is a valid approved system id.
+
+    Args:
+        token (str): The string token to check.
+    
+    Returns:
+    bool: True if the token does not contain any spaces.
+    '''
+    return ' ' not in token
+    

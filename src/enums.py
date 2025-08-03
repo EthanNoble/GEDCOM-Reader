@@ -36,6 +36,10 @@ class JSONField(Enum):
     FAM = 1
 
 
+class Form(StrEnum):
+    LINEAGE_LINKED = 'LINEAGE-LINKED'
+
+
 class NameType(StrEnum):
     '''
     Represents the different types of names and individual might have.
@@ -81,6 +85,7 @@ class Tag(StrEnum):
     TIME = 'TIME'
     LANG = 'LANG'
     SUBM = 'SUBM'
+    SUBN = 'SUBN'
     FILE = 'FILE'
     NOTE = 'NOTE'
     FAM = 'FAM'
