@@ -81,6 +81,26 @@ class Restriction(StrEnum):
     CONFIDENTIAL = 'confidential'
     LOCKED = 'locked'
 
+class PedigreeLinkageType(StrEnum):
+    '''
+    The type of pedigree linkage for a child in a family.
+    '''
+    NONE = ''
+    ADOPTED = 'adopted'
+    BIRTH = 'birth'
+    FOSTER = 'foster'
+    SEALING = 'sealing'
+
+
+class ChildLinkageStatus(StrEnum):
+    '''
+    The status of a child in a family.
+    '''
+    NONE = ''
+    CHALLENGED = 'challenged'
+    DISPROVEN = 'disproven'
+    PROVEN = 'proven'
+
 
 class Tag(StrEnum):
     '''

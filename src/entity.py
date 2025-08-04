@@ -231,15 +231,18 @@ class Name(EntityContainer):
                 {'type':        'Suffix', 'value': ''},
             ]
         })
-    def set_name_type(self, name_type: enums.NameType) -> None:
-        self._data['nameType'] = name_type
-    def set_line_value_name(self, value: str) -> None:
-        self._data['lineValueName'] = value
-    def set_structured_part(self, part_type: enums.NamePartType, value: str) -> None:
+    
+    def add_structured_part(self, part_type: enums.NamePartType, value: str) -> None:
         for part in self._data['structuredParts']:
             if part['type'] == part_type.value:
                 part['value'] = value
                 break
+
+    def set_name_type(self, name_type: enums.NameType) -> None:
+        self._data['nameType'] = name_type
+
+    def set_line_value_name(self, value: str) -> None:
+        self._data['lineValueName'] = value
 
 
 class Place(EntityContainer):
@@ -363,6 +366,12 @@ class Attribute(Event):
             },
         })
 
+    def set_type(self, attr_type: str) -> None:
+        self._data['attribute']['type'] = attr_type
+
+    def set_value(self, value: str) -> None:
+        self._data['attribute']['value'] = value
+
 
 class Individual(EntityContainer):
     '''
@@ -371,27 +380,59 @@ class Individual(EntityContainer):
     def __init__(self, cross_ref_id: str):
         super().__init__({
             'crossReferenceId': cross_ref_id,
-            'restrictionNotice': enums.Restriction.NONE,
+            'individualRestrictionNotice': enums.Restriction.NONE,
             'names': [],
             'sex': enums.Sex.UNKNOWN,
             'isDead': False,
-            'events': [],
-            'attributes': [],
+            'individualEvents': [],
+            'individualAttributes': [],
+            'childToFamilyLink': {
+                'familyCrossReferenceId': '',
+                'pedigreeLinkageType': enums.PedigreeLinkageType.NONE,
+                'childLinkageStatus': enums.ChildLinkageStatus.NONE,
+                'note': ''
+            },
+            'spouseToFamilyLink': {
+                'familyCrossReferenceId': '',
+                'note': ''
+            },
             'parentOne': '',
             'parentTwo': '',
+            'association': '',
+            'submittedBy': '',
+            'aliasCrossReferenceId': '',
+            'ancestorResearchInterestCrossReferenceId': '',
+            'descendantResearchInterestCrossReferenceId': '',
+            'permanentFileNumber': '',
+            'ancestralFileNumber': '',
+            'userReference': {
+                'number': '',
+                'type': ''
+            },
+            'systemRecordId': '',
+            'lastChanged': {
+                'dateTime': '',
+                'note': ''
+            },
+            'individualNote': '',
+            'individualSourceCitation': '',
+            'individualMultimediaLink': ''
         })
     
-    def add_event(self, event: IndividualEvent) -> None:
-        self._data['events'].append(event)
-
-    def add_attribute(self, event: Attribute) -> None:
-        self._data['attributes'].append(event)
-
     def add_name(self, name: Name) -> None:
         self._data['names'].append(name)
+    
+    def add_individual_event(self, event: IndividualEvent) -> None:
+        self._data['individualEvents'].append(event)
+    
+    def add_individual_attribute(self, attribute: Attribute) -> None:
+        self._data['individualAttributes'].append(attribute)
 
     def set_cross_reference_id(self, cross_ref_id: str) -> None:
         self._data['crossReferenceId'] = cross_ref_id
+
+    def set_individual_restriction_notice(self, restriction: enums.Restriction) -> None:
+        self._data['individualRestrictionNotice'] = restriction
 
     def set_sex(self, sex: enums.Sex) -> None:
         self._data['sex'] = sex
@@ -404,6 +445,69 @@ class Individual(EntityContainer):
 
     def set_parent_two(self, parent_two: str) -> None:
         self._data['parentTwo'] = parent_two
+
+    def set_association(self, association: str) -> None:
+        self._data['association'] = association
+
+    def set_submitted_by(self, submitted_by: str) -> None:
+        self._data['submittedBy'] = submitted_by
+
+    def set_alias_cross_reference_id(self, alias_id: str) -> None:
+        self._data['aliasCrossReferenceId'] = alias_id
+
+    def set_ancestor_research_interest_cross_reference_id(self, ancestor_id: str) -> None:
+        self._data['ancestorResearchInterestCrossReferenceId'] = ancestor_id
+
+    def set_descendant_research_interest_cross_reference_id(self, descendant_id: str) -> None:
+        self._data['descendantResearchInterestCrossReferenceId'] = descendant_id
+
+    def set_permanent_file_number(self, file_number: str) -> None:
+        self._data['permanentFileNumber'] = file_number
+
+    def set_ancestral_file_number(self, file_number: str) -> None:
+        self._data['ancestralFileNumber'] = file_number
+
+    def set_system_record_id(self, record_id: str) -> None:
+        self._data['systemRecordId'] = record_id
+
+    def set_individual_note(self, note: str) -> None:
+        self._data['individualNote'] = note
+
+    def set_individual_source_citation(self, citation: str) -> None:
+        self._data['individualSourceCitation'] = citation
+
+    def set_individual_multimedia_link(self, link: str) -> None:
+        self._data['individualMultimediaLink'] = link
+
+    def set_child_to_family_link_family_cross_reference_id(self, family_cross_ref_id: str) -> None:
+        self._data['childToFamilyLink']['familyCrossReferenceId'] = family_cross_ref_id
+
+    def set_child_to_family_link_pedigree_linkage_type(self, pedigree_linkage_type: enums.PedigreeLinkageType) -> None:
+        self._data['childToFamilyLink']['pedigreeLinkageType'] = pedigree_linkage_type
+
+    def set_child_to_family_link_child_linkage_status(self, child_linkage_status: enums.ChildLinkageStatus) -> None:
+        self._data['childToFamilyLink']['childLinkageStatus'] = child_linkage_status
+
+    def set_child_to_family_link_note(self, note: str) -> None:
+        self._data['childToFamilyLink']['note'] = note
+
+    def set_spouse_to_family_link_family_cross_reference_id(self, family_cross_ref_id: str) -> None:
+        self._data['spouseToFamilyLink']['familyCrossReferenceId'] = family_cross_ref_id
+
+    def set_spouse_to_family_link_note(self, note: str) -> None:
+        self._data['spouseToFamilyLink']['note'] = note
+
+    def set_user_reference_number(self, number: str) -> None:
+        self._data['userReference']['number'] = number
+
+    def set_user_reference_type(self, ref_type: str) -> None:
+        self._data['userReference']['type'] = ref_type
+
+    def set_last_changed_date_time(self, date_time: str) -> None:
+        self._data['lastChanged']['dateTime'] = date_time
+
+    def set_last_changed_note(self, note: str) -> None:
+        self._data['lastChanged']['note'] = note
 
 
 class Date(EntityContainer):
@@ -491,6 +595,9 @@ class Family(EntityContainer):
                 'note': ''
             }
         })
+    
+    def add_event(self, event: FamilyEvent) -> None:
+        self._data['events'].append(event)
 
     def add_child(self, child: Individual) -> None:
         self._data['children'].append(child)
@@ -503,3 +610,27 @@ class Family(EntityContainer):
 
     def set_parent_two(self, parent_two: str) -> None:
         self._data['parentTwo'] = parent_two
+
+    def set_restriction_notice(self, restriction: enums.Restriction) -> None:
+        self._data['restrictionNotice'] = restriction
+
+    def set_number_of_children(self, number: str) -> None:
+        self._data['numberOfChildren'] = number
+
+    def set_submitted_by(self, submitted_by: str) -> None:
+        self._data['submittedBy'] = submitted_by
+
+    def set_system_record_id(self, record_id: str) -> None:
+        self._data['systemRecordId'] = record_id
+
+    def set_user_reference_number(self, number: str) -> None:
+        self._data['userReference']['number'] = number
+
+    def set_user_reference_type(self, ref_type: str) -> None:
+        self._data['userReference']['type'] = ref_type
+
+    def set_last_changed_date_time(self, date_time: str) -> None:
+        self._data['lastChanged']['dateTime'] = date_time
+
+    def set_last_changed_note(self, note: str) -> None:
+        self._data['lastChanged']['note'] = note
