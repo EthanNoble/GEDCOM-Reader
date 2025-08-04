@@ -275,7 +275,12 @@ class ParseEngine:
                                 self._error = err_unrecognized(child.tag)
                                 return None
                 case enums.Tag.PLAC:
-                    header.set_place(record.line_value)
+                    if len(record.child_records) == 1 \
+                        and record.child_records[0].tag == enums.Tag.FORM:
+                        header.set_place_hierarchy(record.child_records[0].line_value.split(','))
+                    else:
+                        self._error = 'Invalid header PLAC.FORM record'
+                        return None
                 case enums.Tag.DEST:
                     header.set_receiving_system(record.line_value)
                 case enums.Tag.FILE:
@@ -292,62 +297,6 @@ class ParseEngine:
         
         return header
     
-    def parse_address(self, record: entity.Record) -> entity.Address | None:
-        '''
-        Parses an address structure from a GEDCOM record and returns an Address object.
-        Args:
-            record (entity.Record): The GEDCOM record containing address-related child records.
-        Returns:
-            entity.Address | None: An Address object populated with parsed address data, or None if no address data is found.
-        '''
-
-        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized address tag \'{tag}\''
-
-        address: entity.Address = entity.Address()
-        for record in record.child_records:
-            match record.tag:
-                case enums.Tag.ADDR:
-                    address.add_address_line(record.line_value)
-                    # Set to false once first non-CONT tag is reached. Then
-                    # if a subsequent non-connecting CONT tags are encountered,
-                    # throw an error
-                    appending_addr_cont = True
-                    for addr_child in record.child_records:
-                        match addr_child.tag:
-                            case enums.Tag.CONT:
-                                if not appending_addr_cont:
-                                    self._error = f'Out of order CONT tags within address'
-                                    return None
-                                address.add_address_line(addr_child.line_value)
-                            case enums.Tag.CITY:
-                                address.set_city_address(addr_child.line_value)
-                                appending_addr_cont = False
-                            case enums.Tag.STAE:
-                                address.set_state_address(addr_child.line_value)
-                                appending_addr_cont = False
-                            case enums.Tag.POST:
-                                address.set_zip_code(addr_child.line_value)
-                                appending_addr_cont = False
-                            case enums.Tag.CTRY:
-                                address.set_country_address(addr_child.line_value)
-                                appending_addr_cont = False
-                            case _:
-                                self._error = err_unrecognized(addr_child.tag)
-                                return None
-                case enums.Tag.PHON:
-                    address.set_phone_number(record.line_value)
-                case enums.Tag.EMAIL:
-                    address.set_email_address(record.line_value)
-                case enums.Tag.FAX:
-                    address.set_fax_address(record.line_value)
-                case enums.Tag.WWW:
-                    address.set_web_address(record.line_value)
-                case _:
-                    self._error = err_unrecognized(record.tag)
-                    return None
-                
-        return address
-
     def parse_fam_records(self) -> List[entity.Family] | None:
         '''
         Parses family records and constructs a list of Family entities.
@@ -428,6 +377,67 @@ class ParseEngine:
             record.individual = individual
             individuals.append(individual)
         return individuals
+
+
+
+
+
+
+    def parse_address(self, record: entity.Record) -> entity.Address | None:
+        '''
+        Parses an address structure from a GEDCOM record and returns an Address object.
+        Args:
+            record (entity.Record): The GEDCOM record containing address-related child records.
+        Returns:
+            entity.Address | None: An Address object populated with parsed address data, or None if no address data is found.
+        '''
+
+        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized address tag \'{tag}\''
+
+        address: entity.Address = entity.Address()
+        for record in record.child_records:
+            match record.tag:
+                case enums.Tag.ADDR:
+                    address.add_address_line(record.line_value)
+                    # Set to false once first non-CONT tag is reached. Then
+                    # if a subsequent non-connecting CONT tags are encountered,
+                    # throw an error
+                    appending_addr_cont = True
+                    for addr_child in record.child_records:
+                        match addr_child.tag:
+                            case enums.Tag.CONT:
+                                if not appending_addr_cont:
+                                    self._error = f'Out of order CONT tags within address'
+                                    return None
+                                address.add_address_line(addr_child.line_value)
+                            case enums.Tag.CITY:
+                                address.set_city_address(addr_child.line_value)
+                                appending_addr_cont = False
+                            case enums.Tag.STAE:
+                                address.set_state_address(addr_child.line_value)
+                                appending_addr_cont = False
+                            case enums.Tag.POST:
+                                address.set_zip_code(addr_child.line_value)
+                                appending_addr_cont = False
+                            case enums.Tag.CTRY:
+                                address.set_country_address(addr_child.line_value)
+                                appending_addr_cont = False
+                            case _:
+                                self._error = err_unrecognized(addr_child.tag)
+                                return None
+                case enums.Tag.PHON:
+                    address.set_phone_number(record.line_value)
+                case enums.Tag.EMAIL:
+                    address.set_email_address(record.line_value)
+                case enums.Tag.FAX:
+                    address.set_fax_address(record.line_value)
+                case enums.Tag.WWW:
+                    address.set_web_address(record.line_value)
+                case _:
+                    self._error = err_unrecognized(record.tag)
+                    return None
+                
+        return address
 
     def _parse_personal_name_structure(self, record: entity.Record) -> Optional[entity.Individual.Name]:
         name: entity.Individual.Name = entity.Individual.Name()

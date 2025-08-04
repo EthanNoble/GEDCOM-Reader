@@ -38,8 +38,8 @@ class File:
         
         # self._individuals: List[entity.Individual] | None = self._engine.run(
         #     self._engine.parse_indi_records)
-        # self._families: List[entity.Family] | None = self._engine.run(
-        #     self._engine.parse_fam_records)
+        self._families: List[entity.Family] | None = self._engine.run(
+            self._engine.parse_fam_records)
 
 
     def jsonify(self, *fields: enums.JSONField) -> str:

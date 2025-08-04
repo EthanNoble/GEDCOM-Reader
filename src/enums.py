@@ -53,6 +53,15 @@ class NameType(StrEnum):
     MARRIED = 'married'
 
 
+class NamePartType(StrEnum):
+    SURNAME = 'Surname'
+    PREFIX = 'Prefix'
+    GIVEN = 'Given'
+    NICKNAME = 'Nickname'
+    SURNAME_PREFIX = 'SurnamePrefix'
+    SUFFIX = 'Suffix'
+
+
 class Sex(StrEnum):
     '''
     Represents the sex of an individual in a GEDCOM file.
@@ -61,8 +70,16 @@ class Sex(StrEnum):
     MALE = 'M'
     FEMALE = 'F'
     UNKNOWN = 'U'
-    INTERSEX = 'X'
-    NOT_RECORDED = 'N'
+
+
+class Restriction(StrEnum):
+    '''
+    The privacy restriction that can be applied to a record.
+    '''
+    NONE = ''
+    PRIVACY = 'privacy'
+    CONFIDENTIAL = 'confidential'
+    LOCKED = 'locked'
 
 
 class Tag(StrEnum):
