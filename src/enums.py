@@ -34,6 +34,7 @@ class JSONField(Enum):
     '''
     IND = 0
     FAM = 1
+    METADATA = 2
 
 
 class Form(StrEnum):
@@ -53,13 +54,23 @@ class NameType(StrEnum):
     MARRIED = 'married'
 
 
-class NamePartType(StrEnum):
-    SURNAME = 'Surname'
-    PREFIX = 'Prefix'
-    GIVEN = 'Given'
-    NICKNAME = 'Nickname'
-    SURNAME_PREFIX = 'SurnamePrefix'
-    SUFFIX = 'Suffix'
+class PhoneticType(StrEnum):
+    '''
+    The type of phonetic variation for a name.
+    '''
+    NONE = ''
+    HANGUL = 'hangul'
+    KANA = 'kana'
+
+
+class RomanizedType(StrEnum):
+    '''
+    The type of romanized variation for a name.
+    '''
+    NONE = ''
+    PINYIN = 'pinyin'
+    ROMAIJI = 'romaji'
+    WADEGILES = 'wadegiles'
 
 
 class Sex(StrEnum):
@@ -227,6 +238,9 @@ class Tag(StrEnum):
     CONC = 'CONC'
     PUBL = 'PUBL'
     ALIA = 'ALIA'
+    RESN = 'RESN'
+    BLES = 'BLES'
+    ORDN = 'ORDN'
     SSN = 'SSN'
     FSID = 'FSID'
 
@@ -241,37 +255,33 @@ class ObsoleteTag(StrEnum):
     FSID = 'FSID'
 
 
-indi_event_type = {
-    Tag.BIRT.value: 'Birth',
-    Tag.DEAT.value: 'Death',
-    Tag.BURI.value: 'Burial',
-    Tag.CREM.value: 'Cremation',
-    Tag.NATU.value: 'Naturalization',
-    Tag.EMIG.value: 'Emigration',
-    Tag.IMMI.value: 'Immigration',
-    Tag.ADOP.value: 'Adoption',
-    Tag.BAPM.value: 'Baptism',
-    Tag.BARM.value: 'Bar Mitzvah',
-    Tag.BASM.value: 'Bas Mitzvah',
-    Tag.CHRA.value: 'Christening',
-    Tag.CONF.value: 'Confirmation',
-    Tag.FCOM.value: 'First Communion',
-    Tag.CENS.value: 'Census',
-    Tag.PROB.value: 'Probate',
-    Tag.WILL.value: 'Will',
-    Tag.GRAD.value: 'Graduation',
-    Tag.RETI.value: 'Retirement',
-    Tag.CHR.value: 'Adult Christening',
-    Tag.EVEN.value: ''
+event_type_individual = {
+    Tag.EVEN: '',
+    Tag.BIRT: 'Birth',
+    Tag.CHR: 'Adult Christening',
+    Tag.DEAT: 'Death',
+    Tag.BURI: 'Burial',
+    Tag.CREM: 'Cremation',
+    Tag.ADOP: 'Adoption',
+    Tag.NATU: 'Naturalization',
+    Tag.EMIG: 'Emigration',
+    Tag.IMMI: 'Immigration',
+    Tag.BAPM: 'Baptism',
+    Tag.BARM: 'Bar Mitzvah',
+    Tag.BASM: 'Bas Mitzvah',
+    Tag.BLES: 'Bles',
+    Tag.CHRA: 'Christening',
+    Tag.CONF: 'Confirmation',
+    Tag.FCOM: 'First Communion',
+    Tag.ORDN: 'Ord',
+    Tag.CENS: 'Census',
+    Tag.PROB: 'Probate',
+    Tag.WILL: 'Will',
+    Tag.GRAD: 'Graduation',
+    Tag.RETI: 'Retirement'
 }
 
-sex_to_str = {
-    'M': 'Male',
-    'F': 'Female',
-    'U': 'Unknown',
-    'X': 'Intersex',
-    'N': 'Not Record'
-}
+event_type_family = {}
 
 months = {
     1: 'January',

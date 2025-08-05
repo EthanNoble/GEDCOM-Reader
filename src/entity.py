@@ -50,10 +50,10 @@ class EntityContainer:
     def __init__(self, data: Dict[str, Any]) -> None:
         self._data = data
     
-    def jsonify(self) -> str:
+    def prune_data(self) -> Dict[str, Any]:
         '''
-        Serializes the container's data to json and prunes keys that have empty values.
-        An empty value is any value that contains `None`, `''`, `[]`, or `{}`.
+        Prunes keys that have empty values. An empty value
+        is any value that contains `None`, `''`, `[]`, or `{}`.
         Returns:
             str: The JSON serialized string
         '''
@@ -87,13 +87,13 @@ class EntityContainer:
 
             return None if is_empty(value) else value
 
-        cleaned_data = {}
+        cleaned_data: Dict[str, Any] = {}
         for key, value in self._data.items():
             serialized_value = serialize(value)
             if serialized_value is not None:
                 cleaned_data[key] = serialized_value
 
-        return json.dumps(cleaned_data, indent=4)
+        return cleaned_data
 
     def get_data(self) -> Dict[str, Any]:
         '''
@@ -214,35 +214,113 @@ class Header(EntityContainer):
         self._data['note'] = value
 
 
+class NamePiece(EntityContainer):
+    '''
+    A piece of a name, such as a surname or given name.
+    '''
+    def __init__(self):
+        super().__init__({
+            'surname': '',
+            'prefix': '',
+            'given': '',
+            'nickname': '',
+            'surnamePrefix': '',
+            'suffix': ''
+        })
+
+    def set_surname(self, surname: str) -> None:
+        self._data['surname'] = surname
+
+    def set_prefix(self, prefix: str) -> None:
+        self._data['prefix'] = prefix
+
+    def set_given(self, given: str) -> None:
+        self._data['given'] = given
+
+    def set_nickname(self, nickname: str) -> None:
+        self._data['nickname'] = nickname
+
+    def set_surname_prefix(self, surname_prefix: str) -> None:
+        self._data['surnamePrefix'] = surname_prefix
+
+    def set_suffix(self, suffix: str) -> None:
+        self._data['suffix'] = suffix
+
+
 class Name(EntityContainer):
     '''
     The name of an individual, which can have multiple parts.
     '''
+
     def __init__(self, name_type: enums.NameType = enums.NameType.MAIN):
         super().__init__({
-            'nameType': name_type,
-            'lineValueName': '',
-            'structuredParts': [
-                {'type':       'Surname', 'value': ''},
-                {'type':        'Prefix', 'value': ''},
-                {'type':         'Given', 'value': ''},
-                {'type':      'Nickname', 'value': ''},
-                {'type': 'SurnamePrefix', 'value': ''},
-                {'type':        'Suffix', 'value': ''},
-            ]
+            'name': {
+                'type': name_type,
+                'value': '',
+                'namePieces': NamePiece(),
+                'nameNote': '',
+                'nameSourceCitation': '',
+            },
+            'phoneticVariation': {
+                'type': enums.PhoneticType.NONE,
+                'value': '',
+                'phoneticNamePieces': NamePiece(),
+                'phoneticNote': '',
+                'phoneticSourceCitation': '',
+            },
+            'romanizedVariation': {
+                'type': enums.RomanizedType.NONE,
+                'value': '',
+                'romanizedNamePieces': NamePiece(),
+                'romanizedNote': '',
+                'romanizedSourceCitation': '',
+            }
         })
-    
-    def add_structured_part(self, part_type: enums.NamePartType, value: str) -> None:
-        for part in self._data['structuredParts']:
-            if part['type'] == part_type.value:
-                part['value'] = value
-                break
 
     def set_name_type(self, name_type: enums.NameType) -> None:
-        self._data['nameType'] = name_type
+        self._data['name']['type'] = name_type
 
-    def set_line_value_name(self, value: str) -> None:
-        self._data['lineValueName'] = value
+    def set_name_value(self, value: str) -> None:
+        self._data['name']['value'] = value
+    
+    def set_name_pieces(self, name_pieces: NamePiece) -> None:
+        self._data['name']['namePieces'] = name_pieces
+    
+    def set_name_note(self, note: str) -> None:
+        self._data['name']['nameNote'] = note
+    
+    def set_name_source_citation(self, citation: str) -> None:
+        self._data['name']['nameSourceCitation'] = citation
+
+    def set_phonetic_type(self, phonetic_type: enums.PhoneticType) -> None:
+        self._data['phoneticVariation']['type'] = phonetic_type
+
+    def set_phonetic_value(self, value: str) -> None:
+        self._data['phoneticVariation']['value'] = value
+
+    def set_phonetic_name_pieces(self, phonetic_name_pieces: NamePiece) -> None:
+        self._data['phoneticVariation']['phoneticNamePieces'] = phonetic_name_pieces
+    
+    def set_phonetic_note(self, note: str) -> None:
+        self._data['phoneticVariation']['phoneticNote'] = note
+    
+    def set_phonetic_source_citation(self, citation: str) -> None:
+        self._data['phoneticVariation']['phoneticSourceCitation'] = citation
+
+    def set_romanized_type(self, romanized_type: enums.RomanizedType) -> None:
+        self._data['romanizedVariation']['type'] = romanized_type
+    
+    def set_romanized_value(self, value: str) -> None:
+        self._data['romanizedVariation']['value'] = value
+
+    def set_romanized_name_pieces(self, romanized_name_pieces: NamePiece) -> None:
+        self._data['romanizedVariation']['romanizedNamePieces'] = romanized_name_pieces
+    
+    def set_romanized_note(self, note: str) -> None:
+        self._data['romanizedVariation']['romanizedNote'] = note
+    
+    def set_romanized_source_citation(self, citation: str) -> None:
+        self._data['romanizedVariation']['romanizedSourceCitation'] = citation
 
 
 class Place(EntityContainer):
@@ -605,11 +683,11 @@ class Family(EntityContainer):
     def set_cross_reference_id(self, cross_ref_id: str) -> None:
         self._data['crossReferenceId'] = cross_ref_id
 
-    def set_parent_one(self, parent_one: str) -> None:
-        self._data['parentOne'] = parent_one
+    def set_parent_one(self, parent: Individual) -> None:
+        self._data['parentOne'] = parent
 
-    def set_parent_two(self, parent_two: str) -> None:
-        self._data['parentTwo'] = parent_two
+    def set_parent_two(self, parent: Individual) -> None:
+        self._data['parentTwo'] = parent
 
     def set_restriction_notice(self, restriction: enums.Restriction) -> None:
         self._data['restrictionNotice'] = restriction

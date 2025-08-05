@@ -35,9 +35,8 @@ class File:
             lambda: self._engine.parse_raw_lines(self._raw_file_lines))
         self._header: entity.EntityContainer | None = self._engine.run(
             self._engine.parse_header)
-        
-        # self._individuals: List[entity.Individual] | None = self._engine.run(
-        #     self._engine.parse_indi_records)
+        self._individuals: List[entity.Individual] | None = self._engine.run(
+            self._engine.parse_indi_records)
         self._families: List[entity.Family] | None = self._engine.run(
             self._engine.parse_fam_records)
 
@@ -51,13 +50,16 @@ class File:
         '''
         json_obj: Dict[str, Any] = {}
 
-        if (len(fields) == 0 or enums.JSONField.IND in fields) \
-            and self._individuals and len(self._individuals) > 0:
-            json_obj['individuals'] = [indi.jsonify() for indi in self._individuals]
+        if enums.JSONField.METADATA in fields and self._header:
+            json_obj['metadata'] = self._header.prune_data()
 
-        if (len(fields) == 0 or enums.JSONField.FAM in fields) \
+        if (enums.JSONField.IND in fields or len(fields) == 0) \
+            and self._individuals and len(self._individuals) > 0:
+            json_obj['individuals'] = [indi.prune_data() for indi in self._individuals]
+
+        if (enums.JSONField.FAM in fields or len(fields) == 0) \
             and self._families and len(self._families) > 0:
-            json_obj['families'] = [fam.jsonify() for fam in self._families]
+            json_obj['families'] = [fam.prune_data() for fam in self._families]
 
         return json.dumps(json_obj, indent=4)
 

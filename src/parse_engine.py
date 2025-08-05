@@ -200,8 +200,8 @@ class ParseEngine:
             self._error = 'No header record found at the beginning of the GEDCOM file'
             return None
         
-        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized header tag \'{tag}\''
-        err_date: Callable[[str], str] = lambda value: f'Invalid header value \'{value}\' for date record'
+        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized header tag {tag}'
+        err_date: Callable[[str], str] = lambda value: f'Invalid header value {value} for date record'
 
         header: entity.Header = entity.Header()
         for record in self._header.child_records:
@@ -308,35 +308,68 @@ class ParseEngine:
             otherwise None if an error occurs.
         '''
 
+        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized family tag {tag}'
+
         families: List[entity.Family] = []
         for record in self._fam_records:
             family: entity.Family = entity.Family(record.cross_ref_id)
             for child in record.child_records:
-                pointer: str = child.cross_ref_ptr
+                child_pointer: str = child.cross_ref_ptr
                 match child.tag:
-                    case enums.Tag.HUSB.value | enums.Tag.WIFE.value | enums.Tag.CHIL.value:
-                        if pointer in self._top_level_references:
-                            referenced_record: entity.Record = self._top_level_references[pointer]
+                    case enums.Tag.RESN:
+                        if child.line_value not in enums.Restriction:
+                            self._error = f'Invalid restriction notice {child.line_value} for family {record.cross_ref_id}'
+                            return None
+                        family.set_restriction_notice(enums.Restriction(child.line_value))
+                    case enums.Tag.ANUL \
+                        | enums.Tag.CENS \
+                        | enums.Tag.DIV \
+                        | enums.Tag.DIVF \
+                        | enums.Tag.ENGA \
+                        | enums.Tag.MARB \
+                        | enums.Tag.MARC \
+                        | enums.Tag.MARR \
+                        | enums.Tag.MARL \
+                        | enums.Tag.MARS \
+                        | enums.Tag.RESI \
+                        | enums.Tag.EVEN:
+                        pass
+                    case enums.Tag.HUSB | enums.Tag.WIFE | enums.Tag.CHIL:
+                        if child_pointer in self._top_level_references:
+                            referenced_record: entity.Record = self._top_level_references[child_pointer]
                             referenced_indi: entity.Individual | None = referenced_record.individual
 
                             if not referenced_indi:
-                                self._error = f'The record \'{child}\' references an individual which does not exist'
+                                self._error = f'The record {child} references an individual which does not exist'
                                 return None
 
-                            if child.tag == enums.Tag.HUSB.value:
-                                family.parent1 = referenced_indi
-                            elif child.tag == enums.Tag.WIFE.value:
-                                family.parent2 = referenced_indi
-                            elif child.tag == enums.Tag.CHIL.value:
+                            if child.tag == enums.Tag.HUSB:
+                                family.set_parent_one(referenced_indi)
+                            elif child.tag == enums.Tag.WIFE:
+                                family.set_parent_two(referenced_indi)
+                                # if len(child.child_records) > 1:
+                                #     self._error = f'The record {child} cannot have more than one child record'
+                                #     return None
+                                # elif len(child.child_records) == 1 and child.child_records[0].tag == enums.Tag.AGE:
+                            elif child.tag == enums.Tag.CHIL:
                                 family.add_child(referenced_indi)
                         else:
-                            self._error = f'The record \'{child}\' references a record which does not exist'
+                            self._error = f'The record {child} references a record which does not exist'
                             return None
-                    case enums.Tag.MARR.value:
+                    case enums.Tag.NCHI:
+                        pass
+                    case enums.Tag.SUBM:
+                        pass
+                    case enums.Tag.REFN:
+                        pass
+                    case enums.Tag.RIN:
                         pass
                     case _:
-                        pass
+                        self._error = err_unrecognized(child.tag)
+                        return None
+
             families.append(family)
+
         return families
 
     def parse_indi_records(self) -> List[entity.Individual] | None:
@@ -347,38 +380,126 @@ class ParseEngine:
             List[entity.Individual] | None: A list of parsed Individual entities, or None if a parsing error occurs.
         '''
 
-        individuals: List[entity.Individual] = []
+        err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized individual tag {tag}'
 
-        for record in self._indi_records:
-            individual: entity.Individual = entity.Individual(
-                record.cross_ref_id)
+        def parse_name_pieces(record: entity.Record) -> entity.NamePiece:
+            name_piece: entity.NamePiece = entity.NamePiece()
             for child in record.child_records:
                 match child.tag:
-                    case enums.Tag.NAME.value:
-                        name: entity.Individual.Name | None = self._parse_personal_name_structure(child)
-                        if not name:
-                            self._error = f'Invalid name {child.line_value} for individual {record.cross_ref_id}'
-                            return None
-                        individual.names.append(name)
-                    case enums.Tag.SEX.value:
+                    case enums.Tag.NPFX:
+                        name_piece.set_prefix(child.line_value)
+                    case enums.Tag.GIVN:
+                        name_piece.set_given(child.line_value)
+                    case enums.Tag.NICK:
+                        name_piece.set_nickname(child.line_value)
+                    case enums.Tag.SPFX:
+                        name_piece.set_surname_prefix(child.line_value)
+                    case enums.Tag.SURN:
+                        name_piece.set_surname(child.line_value)
+                    case enums.Tag.NSFX:
+                        name_piece.set_suffix(child.line_value)
+                    case _:
+                        # No error when other tags are encountered since this
+                        # is just looking for a subset of possible NAME record tags.
+                        pass
+
+            return name_piece
+
+        individuals: List[entity.Individual] = []
+        for record in self._indi_records:
+            individual: entity.Individual = entity.Individual(record.cross_ref_id)
+            for child in record.child_records:
+                match child.tag:
+                    case enums.Tag.NAME:
+                        name: entity.Name = entity.Name()
+                        line_value: str = child.line_value.replace('/', '')
+                        name_pieces: entity.NamePiece = parse_name_pieces(child)
+                        name.set_name_value(line_value)
+                        name.set_name_pieces(name_pieces)
+                        for name_child in child.child_records:
+                            match name_child.tag:
+                                case enums.Tag.TYPE:
+                                    if name_child.line_value not in enums.NameType:
+                                        self._error = f'Invalid name type {name_child.line_value} for individual {record.cross_ref_id}'
+                                        return None
+                                    name.set_name_type(enums.NameType(name_child.line_value))
+                                case enums.Tag.NOTE:
+                                    name.set_name_note(child.line_value)
+                                case enums.Tag.SOUR:
+                                    name.set_name_source_citation(child.cross_ref_ptr)
+                                case enums.Tag.FONE:
+                                    fone_name_pieces: entity.NamePiece = parse_name_pieces(name_child)
+                                    name.set_phonetic_value(name_child.line_value)
+                                    name.set_phonetic_name_pieces(fone_name_pieces)
+                                    for phonetic_child in name_child.child_records:
+                                        match phonetic_child.tag:
+                                            case enums.Tag.TYPE:
+                                                if phonetic_child.line_value not in enums.PhoneticType:
+                                                    self._error = f'Invalid phonetic type {phonetic_child.line_value} for individual {record.cross_ref_id}'
+                                                    return None
+                                                name.set_phonetic_type(enums.PhoneticType(phonetic_child.line_value))
+                                            case enums.Tag.NOTE:
+                                                name.set_phonetic_note(phonetic_child.line_value)
+                                            case enums.Tag.SOUR:
+                                                name.set_phonetic_source_citation(phonetic_child.cross_ref_ptr)
+                                            case _:
+                                                self._error = err_unrecognized(phonetic_child.tag)
+                                                return None
+                                case enums.Tag.ROMN:
+                                    romanized_name_pieces: entity.NamePiece = parse_name_pieces(name_child)
+                                    name.set_romanized_value(name_child.line_value)
+                                    name.set_romanized_name_pieces(romanized_name_pieces)
+                                    for romanized_child in name_child.child_records:
+                                        match romanized_child.tag:
+                                            case enums.Tag.TYPE:
+                                                if romanized_child.line_value not in enums.RomanizedType:
+                                                    self._error = f'Invalid romanized type {romanized_child.line_value} for individual {record.cross_ref_id}'
+                                                    return None
+                                                name.set_romanized_type(enums.RomanizedType(romanized_child.line_value))
+                                            case enums.Tag.NOTE:
+                                                name.set_romanized_note(romanized_child.line_value)
+                                            case enums.Tag.SOUR:
+                                                name.set_romanized_source_citation(romanized_child.cross_ref_ptr)
+                                            case _:
+                                                self._error = err_unrecognized(romanized_child.tag)
+                                                return None
+                                case _:
+                                    # Do not error out on personal name pieces
+                                    if name_child.tag in {
+                                        enums.Tag.NPFX,
+                                        enums.Tag.GIVN,
+                                        enums.Tag.NICK,
+                                        enums.Tag.SPFX,
+                                        enums.Tag.SURN,
+                                        enums.Tag.NSFX
+                                    }:
+                                        continue
+                                    self._error = err_unrecognized(name_child.tag)
+                                    return None
+                        individual.add_name(name)
+                    case enums.Tag.SEX:
                         if child.line_value == '':
-                            individual.sex = enums.Sex.UNKNOWN
+                            individual.set_sex(enums.Sex.UNKNOWN)
                         elif not child.line_value in enums.Sex:
                             self._error = f'Invalid sex {child.line_value} for individual {record.cross_ref_id}'
                             return None
                         else:
-                            individual.sex = enums.Sex(child.line_value)
-                    case item if item in enums.indi_event_type:
-                        event: entity.Event = self.parse_event_detail_structure(
-                            child)
-                        individual.add_event(event)
+                            individual.set_sex(enums.Sex(child.line_value))
+                    case item if item in enums.event_type_individual:
+                        pass
+                        # event: entity.IndividualEvent | None = self.parse_individual_event(child)
+                        # if not event:
+                        #     return None
+                        # individual.add_individual_event(event)
                     case _:
                         pass
+
             record.individual = individual
             individuals.append(individual)
         return individuals
 
-
+    def parse_individual_event(self, record: entity.Record) -> entity.IndividualEvent | None:
+        pass
 
 
 
@@ -438,58 +559,6 @@ class ParseEngine:
                     return None
                 
         return address
-
-    def _parse_personal_name_structure(self, record: entity.Record) -> Optional[entity.Individual.Name]:
-        name: entity.Individual.Name = entity.Individual.Name()
-        tokens: List[str] = record.line_value.split()
-
-        if len(tokens) == 0:
-            return None
-
-        # Handling the case in which the surname
-        # has spaces, i.e. '/Van Buren/'
-        multi_token_surname: bool = False
-        surname_tokens: List[str] = []
-        for token in tokens:
-            if utils.is_surname(token):
-                name.unstructured_name_parts.append(token.strip('/'))
-            elif token[0] == '/':
-                multi_token_surname = True
-                surname_tokens.append(token.lstrip('/'))
-            elif token[len(token)-1] == '/':
-                multi_token_surname = False
-                surname_tokens.append(token.rstrip('/'))
-                name.unstructured_name_parts.append(' '.join(surname_tokens))
-            elif multi_token_surname:
-                surname_tokens.append(token)
-            else:
-                name.unstructured_name_parts.append(token)
-
-        if multi_token_surname:
-            return None
-
-        for child in record.child_records:
-            match child.tag:
-                case enums.Tag.TYPE.value:
-                    if child.line_value not in enums.NameType:
-                        return None
-                    name.type = enums.NameType(child.line_value)
-                case enums.Tag.NPFX.value:
-                    name.prefix = child.line_value
-                case enums.Tag.GIVN.value:
-                    name.given = child.line_value
-                case enums.Tag.NICK.value:
-                    name.nickname = child.line_value
-                case enums.Tag.SPFX.value:
-                    name.surname_prefix = child.line_value
-                case enums.Tag.SURN.value:
-                    name.surname = child.line_value
-                case enums.Tag.NSFX.value:
-                    name.suffix = child.line_value
-                case _:
-                    pass
-
-        return name
 
     def parse_event_detail_structure(self, record: entity.Record) -> entity.Event:
         '''
