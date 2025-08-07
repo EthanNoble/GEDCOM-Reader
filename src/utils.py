@@ -160,4 +160,16 @@ def is_valid_system_id(token: str) -> bool:
     bool: True if the token does not contain any spaces.
     '''
     return ' ' not in token
-    
+
+
+def strip_BC(token: str) -> str:
+    '''
+    Strips 'B.C.' or 'BC' from the given token.
+
+    Args:
+        token (str): The string token to process.
+
+    Returns:
+        str: The token with 'B.C.' or 'BC' removed.
+    '''
+    return token.replace('B.C.', '').replace('BC', '').strip()

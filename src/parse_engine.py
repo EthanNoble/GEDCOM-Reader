@@ -45,10 +45,13 @@ class ParseEngine:
             res: Any = callback()
             if not self._error:
                 return res
-            print(self.get_warnings()[1], end='', file=sys.stderr)
-            print(self.get_error(), end='', file=sys.stderr)
+            self.dump_messages()
             sys.exit(1)
         return None
+    
+    def dump_messages(self) -> None:
+        print(self.get_warnings()[1], end='', file=sys.stderr)
+        print(self.get_error(), end='', file=sys.stderr)
 
     def get_error(self) -> str:
         '''
@@ -367,8 +370,9 @@ class ParseEngine:
                     case enums.Tag.RIN:
                         pass
                     case _:
-                        self._error = err_unrecognized(child.tag)
-                        return None
+                        if not utils.is_user_defined_tag(child.tag, allow_redefined=True):
+                            self._error = err_unrecognized(child.tag)
+                            return None
 
             families.append(family)
 
@@ -446,8 +450,9 @@ class ParseEngine:
                                             case enums.Tag.SOUR:
                                                 name.set_phonetic_source_citation(phonetic_child.cross_ref_ptr)
                                             case _:
-                                                self._error = err_unrecognized(phonetic_child.tag)
-                                                return None
+                                                if not utils.is_user_defined_tag(phonetic_child.tag, allow_redefined=True):
+                                                    self._error = err_unrecognized(phonetic_child.tag)
+                                                    return None
                                 case enums.Tag.ROMN:
                                     romanized_name_pieces: entity.NamePiece = parse_name_pieces(name_child)
                                     name.set_romanized_value(name_child.line_value)
@@ -464,8 +469,9 @@ class ParseEngine:
                                             case enums.Tag.SOUR:
                                                 name.set_romanized_source_citation(romanized_child.cross_ref_ptr)
                                             case _:
-                                                self._error = err_unrecognized(romanized_child.tag)
-                                                return None
+                                                if not utils.is_user_defined_tag(romanized_child.tag, allow_redefined=True):
+                                                    self._error = err_unrecognized(romanized_child.tag)
+                                                    return None
                                 case _:
                                     # Do not error out on personal name pieces
                                     if name_child.tag in {
@@ -477,8 +483,9 @@ class ParseEngine:
                                         enums.Tag.NSFX
                                     }:
                                         continue
-                                    self._error = err_unrecognized(name_child.tag)
-                                    return None
+                                    if not utils.is_user_defined_tag(name_child.tag, allow_redefined=True):
+                                        self._error = err_unrecognized(name_child.tag)
+                                        return None
                         individual.add_name(name)
                     case enums.Tag.SEX:
                         if child.line_value == '':
@@ -525,8 +532,9 @@ class ParseEngine:
                                 case enums.Tag.OBJE:
                                     pass # TODO: Multimedia
                                 case _:
-                                    self._error = err_unrecognized(event_child.tag)
-                                    return None
+                                    if not utils.is_user_defined_tag(event_child.tag, allow_redefined=True):
+                                        self._error = err_unrecognized(event_child.tag)
+                                        return None
 
                         individual.add_individual_event(event)
                     case _:
@@ -611,6 +619,7 @@ class ParseEngine:
         
         date: entity.Date = entity.Date()
         warning_date: entity.Date = entity.Date()
+        warning_date.set_type(enums.DateType.PHRASE)
 
         # Retrieve calendar type if specified, defaulted to Gregorian if not
         date_line_value: str | None = strip_and_set_calendar_type()
@@ -638,6 +647,7 @@ class ParseEngine:
                     if len(tokens) == 1:
                         year: str = tokens[0]
                         if 'B.C.' in year or 'BC' in year:
+                            year = utils.strip_BC(year)
                             date.set_regular_is_bc(True)
                         else:
                             date.set_regular_is_bc(False)
@@ -668,20 +678,24 @@ class ParseEngine:
                             self._error = f'Invalid year {year} for date record {record}, expected at most one slash'
                             return None
                     elif len(tokens) == 2:
-                        month: str = tokens[0].upper().strip('.')
-                        year: str = tokens[1]
+                        if tokens[1] == 'B.C.' or tokens[1] == 'BC':
+                            year: str = tokens[0]
+                            date.set_regular_is_bc(True)
+                        else:
+                            month: str = tokens[0].upper().strip('.')
+                            year: str = tokens[1]
+                            if month not in enums.Month:
+                                self._warnings.append(f'Invalid month {month} for date record {record}')
+                                warning_date.set_phrase(date_line_value)
+                                return warning_date
+                            date.set_regular_month(enums.Month(month))
+                            date.set_regular_is_bc(False)
 
                         if not year.isdigit():
                             self._warnings.append(f'Invalid year {year} for date record {record}')
                             warning_date.set_phrase(date_line_value)
                             return warning_date
                         date.set_regular_year(int(year))
-
-                        if month not in enums.Month:
-                            self._warnings.append(f'Invalid month {month} for date record {record}')
-                            warning_date.set_phrase(date_line_value)
-                            return warning_date
-                        date.set_regular_month(enums.Month(month))
                     elif len(tokens) == 3:
                         day: str = tokens[0]
                         month: str = tokens[1].upper().strip('.')

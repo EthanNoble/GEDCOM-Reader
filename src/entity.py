@@ -606,6 +606,9 @@ class Date(EntityContainer):
             'calendar': enums.CalendarType.GREGORIAN,
             'type': enums.DateType.REGULAR,
 
+            # Phrase Type
+            'phrase': '',
+
             # Regular Type
             'approximationType': enums.DateApproximated.NONE,
             'day': '',
@@ -624,8 +627,7 @@ class Date(EntityContainer):
             'between': {
                 'start': Date.values.copy(),
                 'end': Date.values.copy()
-            },
-            'phrase': '',
+            }
         })
     
     def set_calendar(self, calendar: enums.CalendarType) -> None:

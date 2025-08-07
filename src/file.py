@@ -39,6 +39,8 @@ class File:
             self._engine.parse_indi_records)
         self._families: List[entity.Family] | None = self._engine.run(
             self._engine.parse_fam_records)
+        
+        self._engine.dump_messages()
 
 
     def jsonify(self, *fields: enums.JSONField) -> str:
