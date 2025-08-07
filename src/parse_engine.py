@@ -45,6 +45,7 @@ class ParseEngine:
             res: Any = callback()
             if not self._error:
                 return res
+            print(self.get_warnings()[1], end='', file=sys.stderr)
             print(self.get_error(), end='', file=sys.stderr)
             sys.exit(1)
         return None
@@ -69,10 +70,10 @@ class ParseEngine:
             If no warnings exist, returns (0, '').
         '''
         warnings: str = ''
-        for i, w in enumerate(self._warnings):
-            warnings += f'[WARNING {i+1}] {w}\n'
+        for w in self._warnings:
+            warnings += f'[WARNING] {w}\n'
         return (len(self._warnings), warnings)
-
+    
     def parse_raw_lines(self, raw_file_lines: List[str]) -> List[entity.Record] | None:
         '''
         Parses a list of raw GEDCOM file lines into structured Record objects.
@@ -231,6 +232,7 @@ class ParseEngine:
                                                 header.set_source_data_publication_date(date)
                                             except ValueError:
                                                 self._error = err_date(source_data_child.line_value)
+                                                return None
                                         case enums.Tag.COPR:
                                             header.set_source_data_copyright(source_data_child.line_value)
                                         case _:
@@ -381,6 +383,7 @@ class ParseEngine:
         '''
 
         err_unrecognized: Callable[[str], str] = lambda tag: f'Unrecognized individual tag {tag}'
+        err_date: Callable[[str], str] = lambda value: f'Invalid value {value} for individual date record'
 
         def parse_name_pieces(record: entity.Record) -> entity.NamePiece:
             name_piece: entity.NamePiece = entity.NamePiece()
@@ -485,12 +488,47 @@ class ParseEngine:
                             return None
                         else:
                             individual.set_sex(enums.Sex(child.line_value))
-                    case item if item in enums.event_type_individual:
-                        pass
-                        # event: entity.IndividualEvent | None = self.parse_individual_event(child)
-                        # if not event:
-                        #     return None
-                        # individual.add_individual_event(event)
+                    case tag if tag in enums.event_type_individual:
+                        event: entity.IndividualEvent = entity.IndividualEvent()
+                        event.set_explicit_event_type(enums.event_type_individual[enums.Tag(tag)])
+                        event.set_line_value(child.line_value)
+
+                        for event_child in child.child_records:
+                            match event_child.tag:
+                                case enums.Tag.TYPE:
+                                    event.set_generic_event_type(event_child.line_value)
+                                case enums.Tag.DATE:
+                                    date: entity.Date | None = self.parse_date(event_child)
+                                    if not date:
+                                        # Set error
+                                        return None
+                                    event.set_event_date(date)
+                                case enums.Tag.PLAC:
+                                    pass
+                                case enums.Tag.ADDR:
+                                    address: entity.Address | None = self.parse_address(event_child)
+                                    if not address:
+                                        return None
+                                    event.set_event_address(address)
+                                case enums.Tag.AGNC:
+                                    pass
+                                case enums.Tag.RELI:
+                                    pass
+                                case enums.Tag.CAUS:
+                                    pass
+                                case enums.Tag.RESN:
+                                    pass
+                                case enums.Tag.NOTE:
+                                    pass # TODO: Note
+                                case enums.Tag.SOUR:
+                                    pass # TODO: Source
+                                case enums.Tag.OBJE:
+                                    pass # TODO: Multimedia
+                                case _:
+                                    self._error = err_unrecognized(event_child.tag)
+                                    return None
+
+                        individual.add_individual_event(event)
                     case _:
                         pass
 
@@ -498,11 +536,205 @@ class ParseEngine:
             individuals.append(individual)
         return individuals
 
-    def parse_individual_event(self, record: entity.Record) -> entity.IndividualEvent | None:
-        pass
+    def parse_date(self, record: entity.Record) -> entity.Date | None:
+        '''
+        Parses a date from a GEDCOM record.
+        Returns:
+            entity.Date | None: A Date object if parsing is successful, otherwise None if an error occurs.
+        '''
 
+        def strip_and_set_calendar_type() -> str | None:
+            at_count: int = record.line_value.count('@')
+            if at_count == 1:
+                self._error = f'Invalid date record {record}, expected two @ symbols for calendar type'
+                return None
+            # If there are two @ symbols, it indicates a calendar type
+            # The format is expected to be: @<calendar_type>@ <date>
+            # where <calendar_type> is one of the enums.CalendarType values
+            # and <date> is the actual date string.
+            if at_count == 2:
+                l = record.line_value.index('@')
+                if l != 0:
+                    self._error = f'Invalid date record {record}, expected @<CALENDAR>@ <date>'
+                    return None
+                r = record.line_value.rindex('@')
 
+                calendar: str = record.line_value[l:r+1]
+                if calendar not in enums.CalendarType:
+                    self._error = f'Unknown calendar type {calendar} for date record {record}'
+                    return None
+                
+                date.set_calendar(enums.CalendarType(calendar))
+                # Remove calendar type from line value
+                return record.line_value.replace(calendar, '').lstrip()
+            
+            # No calendar type specified, return the line value as is
+            return record.line_value
 
+        def determine_date_type(tokens: List[str]) -> enums.DateType | None:
+            if len(tokens) == 0:
+                return None
+            
+            token_one: str = tokens[0].upper().rstrip('.')
+            token_two: str = tokens[1].upper().rstrip('.') if len(tokens) > 1 else ''
+
+            if token_one in enums.DatePeriod:
+                return enums.DateType.PERIOD
+
+            if token_one in enums.DateRange:
+                if token_one == enums.DateRange.BET and 'AND' not in tokens:
+                    self._error = f'Invalid date record {record}, "BET" requires "AND" to separate two dates'
+                    return None
+                if token_two == 'AND':
+                    # If the second token is "AND", then it is invalid
+                    self._error = f'Invalid date record {record}, "AND" must separate two dates'
+                    return None
+                return enums.DateType.RANGE
+
+            if token_one in enums.DateApproximated:
+                return enums.DateType.APPROXIMATED
+
+            if token_one == 'INT':
+                # "INT" is a special case for a regular date with
+                # a date phrase enclosed between parentheses
+                return enums.DateType.REGULAR
+
+            if token_one == '(':
+                if tokens[-1] != ')':
+                    self._error = f'Invalid date record {record}, expected closing parenthesis for date phrase'
+                    return None
+                # If the first token is an opening parenthesis, it indicates a date phrase
+                return enums.DateType.PHRASE
+            
+            # If no special tokens are found, treat it as a regular date
+            return enums.DateType.REGULAR
+        
+        date: entity.Date = entity.Date()
+        warning_date: entity.Date = entity.Date()
+
+        # Retrieve calendar type if specified, defaulted to Gregorian if not
+        date_line_value: str | None = strip_and_set_calendar_type()
+        if not date_line_value:
+            return None
+        
+        tokens: List[str] = date_line_value.split()
+        if len(tokens) == 0:
+            self._error = f'Invalid date record {record}, no date value provided'
+            return None
+
+        # Determine the type of date based on the tokens
+        date_type: enums.DateType | None = determine_date_type(tokens)
+        if not date_type:
+            # If an error occurred within determine_date_type, it will have already set the error message
+            # TODO: Abstract this 'short-circuit' error handling into a separate class-level function
+            self._error = self._error if self._error else f'Unable to determine the type of date for the record {record}'
+            return None
+        date.set_type(date_type)
+
+        # Parse the date_line_value based on the calendar type
+        match date.get_calendar():
+            case enums.CalendarType.GREGORIAN:
+                if date.get_type() == enums.DateType.REGULAR:
+                    if len(tokens) == 1:
+                        year: str = tokens[0]
+                        if 'B.C.' in year or 'BC' in year:
+                            date.set_regular_is_bc(True)
+                        else:
+                            date.set_regular_is_bc(False)
+
+                        year_slash_count = year.count('/')
+                        if year_slash_count == 0:
+                            if not year.isdigit():
+                                self._warnings.append(f'Invalid year {year} for date record {record}')
+                                warning_date.set_phrase(date_line_value)
+                                return warning_date
+                            date.set_regular_year(int(year))
+                        elif year_slash_count == 1:
+                            # If the year contains a slash, it contains a julian alt year
+                            parts = year.split('/')
+                            if not parts[0].isdigit():
+                                self._warnings.append(f'Invalid year {parts[0]} for date record {record}')
+                                warning_date.set_phrase(date_line_value)
+                                return warning_date
+                            date.set_regular_year(int(parts[0]))
+
+                            if not parts[1].isdigit():
+                                self._warnings.append(f'Invalid julian alternative {parts[1]} for date record {record}')
+                                warning_date.set_phrase(date_line_value)
+                                return warning_date
+                            date.set_regular_julian_alternative_year(int(parts[1]))
+                        else:
+                            # If the year contains more than one slash, it is invalid
+                            self._error = f'Invalid year {year} for date record {record}, expected at most one slash'
+                            return None
+                    elif len(tokens) == 2:
+                        month: str = tokens[0].upper().strip('.')
+                        year: str = tokens[1]
+
+                        if not year.isdigit():
+                            self._warnings.append(f'Invalid year {year} for date record {record}')
+                            warning_date.set_phrase(date_line_value)
+                            return warning_date
+                        date.set_regular_year(int(year))
+
+                        if month not in enums.Month:
+                            self._warnings.append(f'Invalid month {month} for date record {record}')
+                            warning_date.set_phrase(date_line_value)
+                            return warning_date
+                        date.set_regular_month(enums.Month(month))
+                    elif len(tokens) == 3:
+                        day: str = tokens[0]
+                        month: str = tokens[1].upper().strip('.')
+                        year: str = tokens[2]
+
+                        if not day.isdigit():
+                            self._warnings.append(f'Invalid day {day} for date record {record}')
+                            warning_date.set_phrase(date_line_value)
+                            return warning_date
+                        date.set_regular_day(int(day))
+
+                        if not year.isdigit():
+                            self._warnings.append(f'Invalid year {year} for date record {record}')
+                            warning_date.set_phrase(date_line_value)
+                            return warning_date
+                        date.set_regular_year(int(year))
+
+                        if month not in enums.Month:
+                            self._warnings.append(f'Invalid month {month} for date record {record}')
+                            warning_date.set_phrase(date_line_value)
+                            return warning_date
+                        date.set_regular_month(enums.Month(month))
+
+            case enums.CalendarType.JULIAN:
+                # TODO: Implement Julian calendar parsing
+                pass
+            case enums.CalendarType.HEBREW:
+                # TODO: Implement Hebrew calendar parsing
+                pass
+            case enums.CalendarType.FRENCH:
+                # TODO: Implement French calendar parsing
+                pass
+            case enums.CalendarType.ROMAN:
+                # TODO: Implement Roman calendar parsing
+                pass
+            case enums.CalendarType.UNKNOWN:
+                # TODO: Implement Unknown calendar parsing
+                pass
+            case _:
+                self._error = f'Unknown calendar type {date.get_calendar()} for date record {record}'
+
+        # if str(record) == '2 DATE @#DHEBREW@ 14 NISAN 5701':exit()
+        # for record in record.child_records:
+        #     match record.tag:
+        #         case enums.Tag.DATE:
+        #             pass
+        #         case enums.Tag.CALN:
+        #             pass
+        #         case _:
+        #             self._error = f'Unrecognized date tag {record.tag}'
+        #             return None
+
+        return date
 
     def parse_address(self, record: entity.Record) -> entity.Address | None:
         '''
@@ -559,51 +791,3 @@ class ParseEngine:
                     return None
                 
         return address
-
-    def parse_event_detail_structure(self, record: entity.Record) -> entity.Event:
-        '''
-        Parses a GEDCOM event detail structure from a given record and returns an Event object.
-        Args:
-            record (entity.Record): The GEDCOM record representing the event and its details.
-        Returns:
-            entity.Event: An Event object populated with parsed event data.
-        '''
-
-        event_type: str = enums.indi_event_type[record.tag] if not record.line_value else record.line_value
-        event: entity.Event = entity.Event(event_type)
-        for child in record.child_records:
-            match child.tag:
-                case enums.Tag.TYPE.value:
-                    event.event_type = child.line_value
-                case enums.Tag.DATE.value:
-                    event.date = entity.Date(child.line_value)
-                case enums.Tag.PLAC.value:
-                    event.place = self.parse_place_structure(child)
-                case enums.Tag.ADDR.value:
-                    event.address = self.parse_address_structure(child)
-                case enums.Tag.NOTE.value:
-                    event.note = child.line_value
-                case _:
-                    pass
-        return event
-
-    def parse_place_structure(self, record: entity.Record) -> entity.Place | None:
-        '''
-        Parses a place structure from a GEDCOM record.
-        Args:
-            record (entity.Record): The GEDCOM record containing place information.
-        Returns:
-            entity.Place | None: A place object populated with parsed data, or None if no place data is found.
-        '''
-
-        place: entity.Place = entity.Place()
-        place.name = record.line_value
-        for child in record.child_records:
-            match child.tag:
-                case enums.Tag.LATI.value:
-                    place.latitude = child.line_value
-                case enums.Tag.LONG.value:
-                    place.longitude = child.line_value
-                case _:
-                    pass
-        return place

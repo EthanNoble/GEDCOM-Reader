@@ -41,6 +41,98 @@ class Form(StrEnum):
     LINEAGE_LINKED = 'LINEAGE-LINKED'
 
 
+class Language(StrEnum):
+    '''
+    Supported languages.
+    '''
+    AFRIKAANS = 'Afrikaans'
+    ALBANIAN = 'Albanian'
+    ANGLO_SAXON = 'Anglo-Saxon'
+    CATALAN = 'Catalan'
+    CATALAN_SPN = 'Catalan_Spn'
+    CZECH = 'Czech'
+    DANISH = 'Danish'
+    DUTCH = 'Dutch'
+    ENGLISH = 'English'
+    ESPERANTO = 'Esperanto'
+    ESTONIAN = 'Estonian'
+    FAROESE = 'Faroese'
+    FINNISH = 'Finnish'
+    FRENCH = 'French'
+    GERMAN = 'German'
+    HAWAIIAN = 'Hawaiian'
+    HUNGARIAN = 'Hungarian'
+    ICELANDIC = 'Icelandic'
+    INDONESIAN = 'Indonesian'
+    ITALIAN = 'Italian'
+    LATVIAN = 'Latvian'
+    LITHUANIAN = 'Lithuanian'
+    NAVAHO = 'Navaho'
+    NORWEGIAN = 'Norwegian'
+    POLISH = 'Polish'
+    PORTUGUESE = 'Portuguese'
+    ROMANIAN = 'Romanian'
+    SERBO_CROA = 'Serbo_Croa'
+    SLOVAK = 'Slovak'
+    SLOVENE = 'Slovene'
+    SPANISH = 'Spanish'
+    SWEDISH = 'Swedish'
+    TURKISH = 'Turkish'
+    WENDIC = 'Wendic'
+    AMHARIC = 'Amharic'
+    ARABIC = 'Arabic'
+    ARMENIAN = 'Armenian'
+    ASSAMESE = 'Assamese'
+    BELORUSIAN = 'Belorusian'
+    BENGALI = 'Bengali'
+    BRAJ = 'Braj'
+    BULGARIAN = 'Bulgarian'
+    BURMESE = 'Burmese'
+    CANTONESE = 'Cantonese'
+    CHURCH_SLAVIC = 'Church-Slavic'
+    DOGRI = 'Dogri'
+    GEORGIAN = 'Georgian'
+    GREEK = 'Greek'
+    GUJARATI = 'Gujarati'
+    HEBREW = 'Hebrew'
+    HINDI = 'Hindi'
+    JAPANESE = 'Japanese'
+    KANNADA = 'Kannada'
+    KHMER = 'Khmer'
+    KONKANI = 'Konkani'
+    KOREAN = 'Korean'
+    LAHNDA = 'Lahnda'
+    LAO = 'Lao'
+    MACEDONIAN = 'Macedonian'
+    MAITHILI = 'Maithili'
+    MALAYALAM = 'Malayalam'
+    MANDRIN = 'Mandrin'
+    MANIPURI = 'Manipuri'
+    MARATHI = 'Marathi'
+    MEWARI = 'Mewari'
+    NEPALI = 'Nepali'
+    ORIYA = 'Oriya'
+    PAHARI = 'Pahari'
+    PALI = 'Pali'
+    PANJABI = 'Panjabi'
+    PERSIAN = 'Persian'
+    PRAKRIT = 'Prakrit'
+    PUSTO = 'Pusto'
+    RAJASTHANI = 'Rajasthani'
+    RUSSIAN = 'Russian'
+    SANSKRIT = 'Sanskrit'
+    SERB = 'Serb'
+    TAGALOG = 'Tagalog'
+    TAMIL = 'Tamil'
+    TELUGU = 'Telugu'
+    THAI = 'Thai'
+    TIBETAN = 'Tibetan'
+    UKRAINIAN = 'Ukrainian'
+    URDU = 'Urdu'
+    VIETNAMESE = 'Vietnamese'
+    YIDDISH = 'Yiddish'
+
+
 class NameType(StrEnum):
     '''
     Represents the different types of names and individual might have.
@@ -73,6 +165,89 @@ class RomanizedType(StrEnum):
     WADEGILES = 'wadegiles'
 
 
+class DateType(StrEnum):
+    REGULAR = 'regular'
+    PERIOD = 'period'
+    RANGE = 'range'
+    APPROXIMATED = 'approximated'
+    PHRASE = 'phrase'
+
+
+class DateRange(StrEnum):
+    NONE = ''
+    BEF = 'BEF'
+    AFT = 'AFT'
+    BET = 'BET'
+
+
+class DatePeriod(StrEnum):
+    FROM = 'FROM'
+    TO = 'TO'
+
+
+class DateApproximated(StrEnum):
+    NONE = ''
+    ABT = 'ABT'
+    CAL = 'CAL'
+    EST = 'EST'
+
+
+class CalendarType(StrEnum):
+    GREGORIAN = '@#DGREGORIAN@'
+    JULIAN = '@#DJULIAN@'
+    HEBREW = '@#DHEBREW@'
+    FRENCH = '@#DFRENCH R@'
+    ROMAN = '@#DROMAN@'
+    UNKNOWN = '@#DUNKNOWN@'
+
+
+class Month(StrEnum):
+    JAN = 'JAN'
+    FEB = 'FEB'
+    MAR = 'MAR'
+    APR = 'APR'
+    MAY = 'MAY'
+    JUN = 'JUN'
+    JUL = 'JUL'
+    AUG = 'AUG'
+    SEP = 'SEP'
+    OCT = 'OCT'
+    NOV = 'NOV'
+    DEC = 'DEC'
+
+
+class MonthHebrew(StrEnum):
+    TSH = 'TSH'
+    CSH = 'CSH'
+    KSL = 'KSL'
+    TVT = 'TVT'
+    SHV = 'SHV'
+    ADR = 'ADR'
+    ADS = 'ADS'
+    NSN = 'NSN'
+    IYR = 'IYR'
+    SVN = 'SVN'
+    TMZ = 'TMZ'
+    AAV = 'AAV'
+    ELL = 'ELL'
+
+
+class MonthFrench(StrEnum):
+    VEND = 'VEND'
+    BRUM = 'BRUM'
+    FRIM = 'FRIM'
+    NIVO = 'NIVO'
+    PLUV = 'PLUV'
+    VENT = 'VENT'
+    GERM = 'GERM'
+    FLOR = 'FLOR'
+    PRAI = 'PRAI'
+    MESS = 'MESS'
+    THER = 'THER'
+    FRUC = 'FRUC'
+    COMP = 'COMP'
+
+
 class Sex(StrEnum):
     '''
     Represents the sex of an individual in a GEDCOM file.
@@ -91,6 +266,7 @@ class Restriction(StrEnum):
     PRIVACY = 'privacy'
     CONFIDENTIAL = 'confidential'
     LOCKED = 'locked'
+
 
 class PedigreeLinkageType(StrEnum):
     '''
@@ -282,21 +458,6 @@ event_type_individual = {
 }
 
 event_type_family = {}
-
-months = {
-    1: 'January',
-    2: 'February',
-    3: 'March',
-    4: 'April',
-    5: 'May',
-    6: 'June',
-    7: 'July',
-    8: 'August',
-    9: 'September',
-    10: 'October',
-    11: 'November',
-    12: 'December'
-}
 
 name_to_str = {
     'main': 'Main',

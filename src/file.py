@@ -33,8 +33,8 @@ class File:
 
         self._records: List[entity.Record] = self._engine.run(
             lambda: self._engine.parse_raw_lines(self._raw_file_lines))
-        self._header: entity.EntityContainer | None = self._engine.run(
-            self._engine.parse_header)
+        # self._header: entity.EntityContainer | None = self._engine.run(
+        #     self._engine.parse_header)
         self._individuals: List[entity.Individual] | None = self._engine.run(
             self._engine.parse_indi_records)
         self._families: List[entity.Family] | None = self._engine.run(

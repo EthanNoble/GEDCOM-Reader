@@ -2,13 +2,11 @@
 Entity classes for representing GEDCOM data structures.
 '''
 
-import json
 from typing import Any, List, Dict
 from typing import cast
-from datetime import date
-from dateutil.parser import parse
 
 from src import enums
+from src import mappings
 
 
 class Record:
@@ -345,6 +343,7 @@ class Event(EntityContainer):
         super().__init__(data | {
             'explicitEventType': '',    # This is the event record tag
             'genericEventType': '',     # User given with TYPE if explicitEventType is EVEN or FACT
+            'lineValue': '',            # The value of the line, if any
             'eventDate': '',
             'eventPlace': '',
             'eventAddress': '',
@@ -362,6 +361,9 @@ class Event(EntityContainer):
 
     def set_generic_event_type(self, value: str) -> None:
         self._data['genericEventType'] = value
+    
+    def set_line_value(self, value: str) -> None:
+        self._data['lineValue'] = value
 
     def set_event_date(self, event_date: str | EntityContainer) -> None:
         self._data['eventDate'] = event_date
@@ -592,16 +594,72 @@ class Date(EntityContainer):
     '''
     A date which can be parsed from a string.
     '''
-    def __init__(self, date_str: str):
-        self._date: date = parse(date_str, fuzzy=True)
+    values: Dict[str, str] = {
+        'day': '',
+        'month': '',
+        'year': '',
+        'isBC': '',
+    }
 
+    def __init__(self):
         super().__init__({
-            # TODO: There will be more stuff to parse from a date
-            'parsedDate': str(self),
-        })
+            'calendar': enums.CalendarType.GREGORIAN,
+            'type': enums.DateType.REGULAR,
 
-    def __str__(self):
-        return self._date.strftime('%Y-%m-%d')
+            # Regular Type
+            'approximationType': enums.DateApproximated.NONE,
+            'day': '',
+            'month': '',
+            'year': '',
+            'julianAlternativeYear': '',
+            'isBC': 'N',
+
+            # Period Type
+            'fromDate': Date.values.copy(),
+            'toDate': Date.values.copy(),
+            
+            # Range Type
+            'before': Date.values.copy(),
+            'after': Date.values.copy(),
+            'between': {
+                'start': Date.values.copy(),
+                'end': Date.values.copy()
+            },
+            'phrase': '',
+        })
+    
+    def set_calendar(self, calendar: enums.CalendarType) -> None:
+        self._data['calendar'] = calendar
+
+    def get_calendar(self) -> enums.CalendarType:
+        return enums.CalendarType(self._data['calendar'])
+    
+    def set_type(self, date_type: enums.DateType) -> None:
+        self._data['type'] = date_type
+
+    def get_type(self) -> enums.DateType:
+        return enums.DateType(self._data['type'])
+
+    def set_approximation(self, approx: enums.DateApproximated) -> None:
+        self._data['approximationType'] = approx
+    
+    def set_regular_day(self, day: int) -> None:
+        self._data['day'] = day
+
+    def set_regular_month(self, month: enums.Month | enums.MonthHebrew | enums.MonthFrench) -> None:
+        self._data['month'] = month
+
+    def set_regular_year(self, year: int) -> None:
+        self._data['year'] = year
+    
+    def set_regular_julian_alternative_year(self, year: int) -> None:
+        self._data['julianAlternativeYear'] = year
+
+    def set_regular_is_bc(self, is_bc: bool) -> None:
+        self._data['isBC'] = 'Y' if is_bc else 'N'
+
+    def set_phrase(self, phrase: str) -> None:
+        self._data['phrase'] = phrase
 
 
 class Address(EntityContainer):
